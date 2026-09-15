@@ -1,0 +1,98 @@
+commonfields:
+  id: XSOAR6Collector
+  version: -1
+name: XSOAR 6 Incident Collector
+display: XSOAR 6 Incident Collector
+category: Utilities
+description: Fetch incidents from a remote Cortex XSOAR 6 instance into Cortex XSIAM.
+configuration:
+  - display: XSOAR 6 Server URL
+    name: url
+    type: 0
+    required: true
+    additionalinfo: "The XSOAR 6 server URL (e.g. https://192.168.1.215)"
+  - display: XSOAR 6 API Key
+    name: api_key
+    type: 4
+    required: true
+  - display: Trust any certificate (not secure)
+    name: insecure
+    type: 8
+    required: false
+    defaultvalue: "true"
+  - display: Use system proxy settings
+    name: proxy
+    type: 8
+    required: false
+  - display: Incident type
+    name: incident_type
+    type: 13
+    required: false
+  - display: Maximum incidents per fetch
+    name: max_fetch
+    type: 0
+    required: false
+    defaultvalue: "50"
+  - display: First fetch time
+    name: first_fetch
+    type: 0
+    required: false
+    defaultvalue: "3 days"
+    additionalinfo: "How far back to fetch incidents on first run (e.g. 3 days, 7 days, 1 month)"
+  - display: Incident query filter
+    name: query
+    type: 0
+    required: false
+    additionalinfo: "XSOAR 6 incident query to filter which incidents to fetch (e.g. type:Phishing)"
+script:
+  type: python
+  subtype: python3
+  script: '-'
+  isfetch: true
+  commands:
+    - name: xsoar6-get-incidents
+      description: Search and retrieve incidents from the remote XSOAR 6 instance.
+      arguments:
+        - name: query
+          description: XSOAR incident query filter.
+          required: false
+        - name: limit
+          description: Maximum number of incidents to return.
+          required: false
+          defaultValue: "50"
+        - name: from_date
+          description: "Start date (ISO format or relative like '3 days')."
+          required: false
+        - name: to_date
+          description: "End date (ISO format or relative)."
+          required: false
+      outputs:
+        - contextPath: XSOAR6.Incidents
+          description: List of incidents from XSOAR 6.
+          type: Unknown
+        - contextPath: XSOAR6.Incidents.id
+          description: Incident ID.
+          type: String
+        - contextPath: XSOAR6.Incidents.name
+          description: Incident name.
+          type: String
+        - contextPath: XSOAR6.Incidents.severity
+          description: Incident severity.
+          type: Number
+        - contextPath: XSOAR6.Incidents.type
+          description: Incident type.
+          type: String
+        - contextPath: XSOAR6.Incidents.created
+          description: Incident creation date.
+          type: Date
+    - name: xsoar6-get-incident
+      description: Get a specific incident from the remote XSOAR 6 instance by ID.
+      arguments:
+        - name: incident_id
+          description: The XSOAR 6 incident ID.
+          required: true
+      outputs:
+        - contextPath: XSOAR6.Incident
+          description: The incident details from XSOAR 6.
+          type: Unknown
+  dockerimage: demisto/python3:3.10.14.100715

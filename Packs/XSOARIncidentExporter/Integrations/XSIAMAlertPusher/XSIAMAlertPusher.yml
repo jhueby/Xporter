@@ -1,0 +1,81 @@
+commonfields:
+  id: XSIAMAlertPusher
+  version: -1
+name: XSIAM Alert Pusher
+display: XSIAM Alert Pusher
+category: Utilities
+description: Push XSOAR 6 incidents to Cortex XSIAM as parsed alerts via the Insert Parsed Alerts API.
+configuration:
+  - display: XSIAM API URL
+    name: url
+    type: 0
+    required: true
+    additionalinfo: "The XSIAM API URL (e.g. https://api-cs-xsiam.xdr.us.paloaltonetworks.com)"
+  - display: XSIAM API Key
+    name: api_key
+    type: 4
+    required: true
+  - display: XSIAM API Key ID
+    name: api_key_id
+    type: 0
+    required: true
+  - display: Trust any certificate (not secure)
+    name: insecure
+    type: 8
+    required: false
+  - display: Use system proxy settings
+    name: proxy
+    type: 8
+    required: false
+  - display: Maximum incidents per push
+    name: max_incidents
+    type: 0
+    required: false
+    defaultvalue: "100"
+  - display: Incident query filter
+    name: query
+    type: 0
+    required: false
+    additionalinfo: "XSOAR incident query to filter which incidents to push (e.g. type:Phishing)"
+script:
+  type: python
+  subtype: python3
+  script: '-'
+  commands:
+    - name: xsiam-push-incidents
+      description: Push XSOAR incidents matching a query to XSIAM as parsed alerts.
+      arguments:
+        - name: query
+          description: Override the configured incident query filter.
+          required: false
+        - name: max_incidents
+          description: Maximum number of incidents to push.
+          required: false
+          defaultValue: "100"
+        - name: from_date
+          description: "Start date for incident search (ISO format, e.g. 2024-01-01T00:00:00Z)."
+          required: false
+        - name: to_date
+          description: "End date for incident search (ISO format)."
+          required: false
+      outputs:
+        - contextPath: XSIAMPush.PushedCount
+          description: Number of incidents pushed.
+          type: Number
+        - contextPath: XSIAMPush.Incidents
+          description: List of pushed incident IDs and names.
+          type: Unknown
+    - name: xsiam-push-incident
+      description: Push a single XSOAR incident to XSIAM as a parsed alert.
+      arguments:
+        - name: incident_id
+          description: The XSOAR incident ID to push.
+          required: true
+      outputs:
+        - contextPath: XSIAMPush.PushedIncident
+          description: Details of the pushed incident.
+          type: Unknown
+  dockerimage: demisto/python3:3.10.14.100715
+fromversion: 6.0.0
+tests:
+  - No tests (auto formatted)
