@@ -52,6 +52,12 @@ configuration:
     type: 8
     required: false
     additionalinfo: "Map Low severity incidents to Medium so they create cases in XSIAM instead of issues only"
+  - display: Timestamp offset (minutes)
+    name: timestamp_offset
+    type: 0
+    required: false
+    defaultvalue: "0"
+    additionalinfo: "Number of minutes to subtract from the current time for the alert event timestamp. Use this to shift observation time (e.g. 5 = 5 minutes ago, 0 = now)."
 script:
   type: python
   subtype: python3

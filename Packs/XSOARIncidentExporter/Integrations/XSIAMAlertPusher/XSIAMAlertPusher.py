@@ -2,7 +2,7 @@ import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 SEVERITY_MAP = {
@@ -148,8 +148,9 @@ def build_raw_context(incident: dict) -> str:
     return json.dumps(filtered, default=str)
 
 
-def map_incident_to_alert(incident: dict, elevate_low: bool = False) -> dict:
-    event_timestamp = int(datetime.now(tz=timezone.utc).timestamp() * 1000)
+def map_incident_to_alert(incident: dict, elevate_low: bool = False, timestamp_offset: int = 0) -> dict:
+    ts = datetime.now(tz=timezone.utc) - timedelta(minutes=timestamp_offset)
+    event_timestamp = int(ts.timestamp() * 1000)
     severity = map_severity(incident.get('severity', 0), elevate_low)
     return {
         'product': 'XSOAR',
@@ -198,7 +199,8 @@ def search_incidents(xsoar_client: XSOAR6Client, query: str | None, max_incident
 
 def push_incidents_command(xsiam_client: XSIAMClient, xsoar_client: XSOAR6Client,
                            args: dict, default_query: str | None,
-                           default_max: int, elevate_low: bool = False) -> CommandResults:
+                           default_max: int, elevate_low: bool = False,
+                           timestamp_offset: int = 0) -> CommandResults:
     query = args.get('query') or default_query
     max_incidents = arg_to_number(args.get('max_incidents')) or default_max
     from_date = args.get('from_date')
@@ -212,7 +214,7 @@ def push_incidents_command(xsiam_client: XSIAMClient, xsoar_client: XSOAR6Client
             outputs={'PushedCount': 0, 'Incidents': []},
         )
 
-    alerts = [map_incident_to_alert(inc, elevate_low) for inc in incidents]
+    alerts = [map_incident_to_alert(inc, elevate_low, timestamp_offset) for inc in incidents]
     xsiam_client.insert_parsed_alerts(alerts)
 
     pushed_summary = [
@@ -231,7 +233,8 @@ def push_incidents_command(xsiam_client: XSIAMClient, xsoar_client: XSOAR6Client
 
 
 def push_single_incident_command(xsiam_client: XSIAMClient, xsoar_client: XSOAR6Client,
-                                  args: dict, elevate_low: bool = False) -> CommandResults:
+                                  args: dict, elevate_low: bool = False,
+                                  timestamp_offset: int = 0) -> CommandResults:
     incident_id = args.get('incident_id')
     if not incident_id:
         raise DemistoException('incident_id argument is required.')
@@ -241,7 +244,7 @@ def push_single_incident_command(xsiam_client: XSIAMClient, xsoar_client: XSOAR6
         raise DemistoException(f'Incident {incident_id} not found.')
 
     incident = data[0]
-    alert = map_incident_to_alert(incident, elevate_low)
+    alert = map_incident_to_alert(incident, elevate_low, timestamp_offset)
     xsiam_client.insert_parsed_alerts([alert])
 
     pushed_info = {
@@ -263,7 +266,8 @@ def push_single_incident_command(xsiam_client: XSIAMClient, xsoar_client: XSOAR6
 
 def sync_new_incidents_command(xsiam_client: XSIAMClient, xsoar_client: XSOAR6Client,
                                args: dict, default_query: str | None,
-                               default_max: int, elevate_low: bool = False) -> CommandResults:
+                               default_max: int, elevate_low: bool = False,
+                               timestamp_offset: int = 0) -> CommandResults:
     max_incidents = arg_to_number(args.get('max_incidents')) or default_max
     query = args.get('query') or default_query
 
@@ -290,7 +294,7 @@ def sync_new_incidents_command(xsiam_client: XSIAMClient, xsoar_client: XSOAR6Cl
             outputs={'SyncedCount': 0, 'Incidents': [], 'LastSyncedID': last_id},
         )
 
-    alerts = [map_incident_to_alert(inc, elevate_low) for inc in new_incidents]
+    alerts = [map_incident_to_alert(inc, elevate_low, timestamp_offset) for inc in new_incidents]
     xsiam_client.insert_parsed_alerts(alerts)
 
     new_last_id = max(int(inc.get('id', 0)) for inc in new_incidents)
@@ -340,6 +344,7 @@ def main() -> None:
     default_max = arg_to_number(params.get('max_incidents')) or 100
     default_query = params.get('query')
     elevate_low = argToBoolean(params.get('elevate_low', False))
+    timestamp_offset = arg_to_number(params.get('timestamp_offset')) or 0
 
     demisto.debug(f'Command being called is {command}')
 
@@ -357,13 +362,13 @@ def main() -> None:
             result = test_module(xsiam_client, xsoar_client)
             return_results(result)
         elif command == 'xsiam-push-incidents':
-            result = push_incidents_command(xsiam_client, xsoar_client, args, default_query, default_max, elevate_low)
+            result = push_incidents_command(xsiam_client, xsoar_client, args, default_query, default_max, elevate_low, timestamp_offset)
             return_results(result)
         elif command == 'xsiam-push-incident':
-            result = push_single_incident_command(xsiam_client, xsoar_client, args, elevate_low)
+            result = push_single_incident_command(xsiam_client, xsoar_client, args, elevate_low, timestamp_offset)
             return_results(result)
         elif command == 'xsiam-sync-new-incidents':
-            result = sync_new_incidents_command(xsiam_client, xsoar_client, args, default_query, default_max, elevate_low)
+            result = sync_new_incidents_command(xsiam_client, xsoar_client, args, default_query, default_max, elevate_low, timestamp_offset)
             return_results(result)
         elif command == 'xsiam-reset-sync':
             result = reset_sync_command()
