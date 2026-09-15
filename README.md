@@ -108,13 +108,40 @@ Packs/XSOARIncidentExporter/
     └── Close_XSIAM_Case_From_XSOAR.yml
 ```
 
-## Installation
+## Exporting All XSOAR Incidents to XSIAM
 
-1. Upload the unified `Xporter.yml` file to your XSOAR 6 instance via **Settings → Integrations → Upload Integration**.
-2. Configure the appropriate integration instance with your API credentials.
-3. For the push integration, use `!xsiam-sync-new-incidents` on a scheduled job in XSOAR 6 to continuously push new incidents.
-4. For the pull integration, enable `Fetches incidents` on the XSIAM integration instance.
-5. To auto-close XSIAM issues when XSOAR incidents close, set up the `SyncXSOARCloseStatus` script as a scheduled job in XSIAM.
+### Step 1 — Install the Integration
+
+Upload the unified `Xporter.yml` file to your XSOAR 6 instance via **Settings → Integrations → Upload Integration**.
+
+### Step 2 — Configure the Instance
+
+Create a new instance of the **Xporter** integration and fill in:
+
+- **XSOAR 6 Server URL** — e.g. `https://192.168.1.215/` (include trailing slash)
+- **XSOAR 6 API Key**
+- **XSIAM API URL** — e.g. `https://api-cs-xsiam.xdr.us.paloaltonetworks.com`
+- **XSIAM API Key** and **XSIAM API Key ID**
+- **Elevate Low severity to Medium** — check this if you want all incidents to create cases and trigger playbooks in XSIAM. Only Medium or higher severity alerts automatically trigger playbooks.
+- **Timestamp offset (minutes)** — the event timestamp defaults to the original XSOAR occurred/created time. If your incidents are old, set a positive offset to shift them forward so XSIAM doesn't silently drop them.
+
+### Step 3 — Initial Bulk Export
+
+Run in the XSOAR 6 playground:
+
+```
+!xsiam-sync-new-incidents max_incidents="100"
+```
+
+Each run picks up where the last one left off. Run it repeatedly until all incidents are synced. To start over, run `!xsiam-reset-sync`.
+
+### Step 4 — Ongoing Sync
+
+Create a scheduled job in XSOAR 6 that runs `!xsiam-sync-new-incidents` on an interval (e.g. every 15 minutes). It only sends new incidents each run — no duplicates.
+
+### Step 5 — Close Status Sync (Optional)
+
+Upload the `SyncXSOARCloseStatus` script to XSIAM and set it up as a scheduled job. It queries XSIAM for open XSOAR-sourced alerts, checks each alert's description for close status, and resolves them with the matching close reason and notes.
 
 ## License
 
