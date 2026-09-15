@@ -19,7 +19,7 @@ tags:
 enabled: true
 args:
   - name: xsiam_url
-    description: "XSIAM API URL (e.g. https://api-cs-xsiam.xdr.us.paloaltonetworks.com)"
+    description: "XSIAM API URL (e.g. https://api-{tenant}.xdr.us.paloaltonetworks.com)"
     required: true
   - name: xsiam_api_key
     description: XSIAM API Key

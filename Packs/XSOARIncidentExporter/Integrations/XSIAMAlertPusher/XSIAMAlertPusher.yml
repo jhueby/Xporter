@@ -19,7 +19,7 @@ configuration:
     name: xsiam_url
     type: 0
     required: true
-    additionalinfo: "The XSIAM API URL (e.g. https://api-cs-xsiam.xdr.us.paloaltonetworks.com)"
+    additionalinfo: "The XSIAM API URL (e.g. https://api-{tenant}.xdr.us.paloaltonetworks.com)"
   - display: XSIAM API Key
     name: xsiam_api_key
     type: 4

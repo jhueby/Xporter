@@ -120,7 +120,7 @@ Create a new instance of the **Xporter** integration and fill in:
 
 - **XSOAR 6 Server URL** — e.g. `https://192.168.1.215/` (include trailing slash)
 - **XSOAR 6 API Key**
-- **XSIAM API URL** — e.g. `https://api-cs-xsiam.xdr.us.paloaltonetworks.com`
+- **XSIAM API URL** — e.g. `https://api-{tenant}.xdr.us.paloaltonetworks.com`
 - **XSIAM API Key** and **XSIAM API Key ID**
 - **Elevate Low severity to Medium** — check this if you want all incidents to create cases and trigger playbooks in XSIAM. Only Medium or higher severity alerts automatically trigger playbooks.
 - **Timestamp offset (minutes)** — the event timestamp defaults to the original XSOAR occurred/created time. If your incidents are old, set a positive offset to shift them forward so XSIAM doesn't silently drop them.
