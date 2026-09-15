@@ -1,4 +1,4 @@
-id: Close XSIAM Case From XSOAR
+id: close-xsiam-case-from-xsoar
 version: -1
 name: Close XSIAM Case From XSOAR
 description: |-
@@ -7,18 +7,20 @@ description: |-
   If the XSOAR incident was closed, closes the XSIAM case with the same reason and notes.
   Attach this playbook to incidents with source "Palo Alto Networks - XSOAR".
 starttaskid: "0"
+inputs: []
+outputs: []
 tasks:
   "0":
     id: "0"
-    taskid: "0"
+    taskid: d4a0e1f2-1a2b-3c4d-5e6f-000000000000
     type: start
     task:
-      id: "0"
+      id: d4a0e1f2-1a2b-3c4d-5e6f-000000000000
       version: -1
-      name: Start
-      type: start
+      name: ""
       iscommand: false
       brand: ""
+      description: ""
     nexttasks:
       '#none#':
         - "1"
@@ -33,10 +35,10 @@ tasks:
       }
   "1":
     id: "1"
-    taskid: "1"
+    taskid: d4a0e1f2-1a2b-3c4d-5e6f-000000000001
     type: regular
     task:
-      id: "1"
+      id: d4a0e1f2-1a2b-3c4d-5e6f-000000000001
       version: -1
       name: Close From XSOAR
       description: Extract XSOAR close reason and notes, close case if applicable.
@@ -58,15 +60,16 @@ tasks:
       }
   "2":
     id: "2"
-    taskid: "2"
+    taskid: d4a0e1f2-1a2b-3c4d-5e6f-000000000002
     type: title
     task:
-      id: "2"
+      id: d4a0e1f2-1a2b-3c4d-5e6f-000000000002
       version: -1
       name: Done
       type: title
       iscommand: false
       brand: ""
+      description: ""
     separatecontext: false
     continueonerrortype: ""
     view: |-
