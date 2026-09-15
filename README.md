@@ -18,6 +18,8 @@ Pushes XSOAR 6 incidents to XSIAM as parsed alerts via the [Insert Parsed Alerts
 |---|---|
 | `!xsiam-push-incidents` | Bulk push incidents matching a query |
 | `!xsiam-push-incident` | Push a single incident by ID |
+| `!xsiam-sync-new-incidents` | Find and push only new incidents not yet synced |
+| `!xsiam-reset-sync` | Reset sync state so next sync sends all incidents |
 
 **Configuration:**
 | Parameter | Description |
@@ -65,28 +67,48 @@ Runs on XSIAM and fetches incidents from a remote XSOAR 6 instance via the XSOAR
 | Need on-demand / manual export | **XSIAM Alert Pusher** (push) |
 | Need continuous automatic sync | Either — both support scheduled operation |
 
+### 3. Automation Scripts (run on XSIAM)
+
+**CloseFromXSOAR** — Playbook task that extracts Close Reason and Close Notes from a pushed XSOAR alert and closes the XSIAM case if the XSOAR incident was closed.
+
+**SyncXSOARCloseStatus** — Scheduled job script that queries XSIAM for open XSOAR-sourced alerts, checks each alert's description for close status, and resolves alerts whose XSOAR incidents are closed. Maps XSOAR close reasons to XSIAM resolution statuses (Resolved, False Positive, Duplicate, Other).
+
+### 4. Playbook
+
+**Close XSIAM Case From XSOAR** — Attach to XSIAM cases with source "Palo Alto Networks - XSOAR". Runs CloseFromXSOAR to auto-close cases when the XSOAR incident was closed.
+
 ## Pack Structure
 
 ```
 Packs/XSOARIncidentExporter/
 ├── pack_metadata.json
-└── Integrations/
-    ├── XSIAMAlertPusher/
-    │   ├── XSIAMAlertPusher.py
-    │   ├── XSIAMAlertPusher.yml
-    │   └── XSIAMAlertPusher_description.md
-    └── XSOAR6Collector/
-        ├── XSOAR6Collector.py
-        ├── XSOAR6Collector.yml
-        └── XSOAR6Collector_description.md
+├── Integrations/
+│   ├── XSIAMAlertPusher/
+│   │   ├── XSIAMAlertPusher.py
+│   │   ├── XSIAMAlertPusher.yml
+│   │   └── XSIAMAlertPusher_description.md
+│   └── XSOAR6Collector/
+│       ├── XSOAR6Collector.py
+│       ├── XSOAR6Collector.yml
+│       └── XSOAR6Collector_description.md
+├── Scripts/
+│   ├── CloseFromXSOAR/
+│   │   ├── CloseFromXSOAR.py
+│   │   └── CloseFromXSOAR.yml
+│   └── SyncXSOARCloseStatus/
+│       ├── SyncXSOARCloseStatus.py
+│       └── SyncXSOARCloseStatus.yml
+└── Playbooks/
+    └── Close_XSIAM_Case_From_XSOAR.yml
 ```
 
 ## Installation
 
 1. Copy the `Packs/XSOARIncidentExporter` directory into your content repository or upload via the Marketplace.
 2. Configure the appropriate integration instance with your API credentials.
-3. For the push integration, create a scheduled job or playbook on XSOAR 6 to run `xsiam-push-incidents` periodically.
+3. For the push integration, use `!xsiam-sync-new-incidents` on a scheduled job in XSOAR 6 to continuously push new incidents.
 4. For the pull integration, enable `Fetches incidents` on the XSIAM integration instance.
+5. To auto-close XSIAM issues when XSOAR incidents close, set up the `SyncXSOARCloseStatus` script as a scheduled job in XSIAM.
 
 ## License
 

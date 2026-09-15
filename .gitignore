@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 .DS_Store
 .claude/
+*.tar.gz
+*.zip
+*_unified.yml

@@ -1,0 +1,197 @@
+commonfields:
+  id: Xporter
+  version: -1
+name: Xporter
+display: Xporter
+category: Utilities
+description: Push XSOAR 6 incidents to Cortex XSIAM as parsed alerts via the Insert Parsed Alerts API.
+configuration:
+- display: XSOAR 6 Server URL
+  name: xsoar_url
+  type: 0
+  required: true
+  additionalinfo: The local XSOAR 6 server URL (e.g. https://192.168.1.215)
+- display: XSOAR 6 API Key
+  name: xsoar_api_key
+  type: 4
+  required: true
+- display: XSIAM API URL
+  name: xsiam_url
+  type: 0
+  required: true
+  additionalinfo: The XSIAM API URL (e.g. https://api-cs-xsiam.xdr.us.paloaltonetworks.com)
+- display: XSIAM API Key
+  name: xsiam_api_key
+  type: 4
+  required: true
+- display: XSIAM API Key ID
+  name: xsiam_api_key_id
+  type: 0
+  required: true
+- display: Trust any certificate (not secure)
+  name: insecure
+  type: 8
+  required: false
+  defaultvalue: 'true'
+- display: Use system proxy settings
+  name: proxy
+  type: 8
+  required: false
+- display: Maximum incidents per push
+  name: max_incidents
+  type: 0
+  required: false
+  defaultvalue: '100'
+- display: Incident query filter
+  name: query
+  type: 0
+  required: false
+  additionalinfo: XSOAR incident query to filter which incidents to push (e.g. type:Phishing)
+- display: Elevate Low severity to Medium
+  name: elevate_low
+  type: 8
+  required: false
+  additionalinfo: Map Low severity incidents to Medium so they create cases in XSIAM instead of issues only
+script:
+  type: python
+  subtype: python3
+  script: "import json\nfrom datetime import datetime, timezone\nfrom typing import Any\n\nSEVERITY_MAP = {\n    0: 'Low',\n    1: 'Low',\n    2: 'Medium',\n    3: 'High',\n    4: 'Critical',\n}\n\n\nclass\
+    \ XSIAMClient(BaseClient):\n\n    def __init__(self, base_url: str, api_key: str, api_key_id: str, verify: bool, proxy: bool):\n        headers = {\n            'x-xdr-auth-id': api_key_id,\n      \
+    \      'Authorization': api_key,\n            'Content-Type': 'application/json',\n        }\n        super().__init__(base_url=base_url, verify=verify, proxy=proxy, headers=headers)\n\n    def insert_parsed_alerts(self,\
+    \ alerts: list) -> dict:\n        body = {'request_data': {'alerts': alerts}}\n        demisto.debug(f'Inserting {len(alerts)} parsed alert(s) into XSIAM')\n        return self._http_request(\n    \
+    \        method='POST',\n            url_suffix='/public_api/v1/alerts/insert_parsed_alerts',\n            json_data=body,\n        )\n\n\nclass XSOAR6Client(BaseClient):\n\n    def __init__(self, base_url:\
+    \ str, api_key: str, verify: bool, proxy: bool):\n        headers = {\n            'Authorization': api_key,\n            'Content-Type': 'application/json',\n            'Accept': 'application/json',\n\
+    \        }\n        super().__init__(base_url=base_url, verify=verify, proxy=proxy, headers=headers)\n\n    def search_incidents(self, query: str = '', size: int = 100, page: int = 0,\n            \
+    \             from_date: str | None = None, to_date: str | None = None) -> list:\n        filter_body: dict[str, Any] = {}\n        if query:\n            filter_body['query'] = query\n        if from_date:\n\
+    \            filter_body['fromDate'] = from_date\n        if to_date:\n            filter_body['toDate'] = to_date\n\n        body: dict[str, Any] = {\n            'filter': filter_body,\n         \
+    \   'page': page,\n            'size': size,\n            'sort': [{'field': 'created', 'asc': True}],\n        }\n        response = self._http_request(\n            method='POST',\n            url_suffix='/incidents/search',\n\
+    \            json_data=body,\n        )\n        return response.get('data') or []\n\n\ndef map_severity(xsoar_severity: int, elevate_low: bool = False) -> str:\n    severity = SEVERITY_MAP.get(xsoar_severity,\
+    \ 'Low')\n    if elevate_low and severity == 'Low':\n        return 'Medium'\n    return severity\n\n\ndef parse_date_to_epoch_ms(date_str: str | None) -> int:\n    if not date_str:\n        return\
+    \ int(datetime.now(tz=timezone.utc).timestamp() * 1000)\n    try:\n        dt = arg_to_datetime(date_str)\n        if dt:\n            return int(dt.timestamp() * 1000)\n    except Exception:\n    \
+    \    demisto.debug(f'Failed to parse date string: {date_str}')\n    return int(datetime.now(tz=timezone.utc).timestamp() * 1000)\n\n\ndef build_description(incident: dict) -> str:\n    status_names\
+    \ = {0: 'Active', 1: 'Done', 2: 'Archive'}\n    severity_names = {0: 'Unknown', 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Critical'}\n    lines: list[str] = []\n\n    lines.append(f'XSOAR Incident ID: {incident.get(\"\
+    id\", \"\")}')\n    lines.append(f'Name: {incident.get(\"name\", \"\")}')\n    lines.append(f'Type: {incident.get(\"type\", \"\")}')\n    status_val = incident.get('status')\n    lines.append(f'Status:\
+    \ {status_names.get(status_val, str(status_val))}')\n    sev = incident.get('severity', 0)\n    lines.append(f'Severity: {severity_names.get(sev, str(sev))}')\n    lines.append(f'Owner: {incident.get(\"\
+    owner\", \"\")}')\n    lines.append(f'Occurred: {incident.get(\"occurred\", \"\")}')\n    lines.append(f'Created: {incident.get(\"created\", \"\")}')\n    lines.append(f'Modified: {incident.get(\"modified\"\
+    , \"\")}')\n    lines.append(f'Closed: {incident.get(\"closed\", \"\")}')\n    lines.append(f'Close Reason: {incident.get(\"closeReason\", \"\")}')\n    lines.append(f'Close Notes: {incident.get(\"\
+    closeNotes\", \"\")}')\n    lines.append(f'Phase: {incident.get(\"phase\", \"\")}')\n    lines.append(f'Playbook ID: {incident.get(\"playbookId\", \"\")}')\n    lines.append(f'Source Brand: {incident.get(\"\
+    sourceBrand\", \"\")}')\n    lines.append(f'Source Instance: {incident.get(\"sourceInstance\", \"\")}')\n\n    details = incident.get('details', '')\n    if details:\n        lines.append(f'Details:\
+    \ {details}')\n    description = incident.get('description', '')\n    if description:\n        lines.append(f'Description: {description}')\n\n    labels = incident.get('labels', [])\n    if labels:\n\
+    \        lines.append('')\n        lines.append('--- Labels ---')\n        for label in labels:\n            lines.append(f'  {label.get(\"type\", \"\")}: {label.get(\"value\", \"\")}')\n\n    custom_fields\
+    \ = incident.get('CustomFields') or {}\n    if custom_fields:\n        lines.append('')\n        lines.append('--- Custom Fields ---')\n        for key, val in sorted(custom_fields.items()):\n     \
+    \       if val is not None and val != '' and val != [] and val != {}:\n                if isinstance(val, (dict, list)):\n                    lines.append(f'  {key}: {json.dumps(val, default=str)}')\n\
+    \                else:\n                    lines.append(f'  {key}: {val}')\n\n    return '\\n'.join(lines)\n\n\ndef build_raw_context(incident: dict) -> str:\n    skip_keys = {'ShardID', 'allRead',\
+    \ 'allReadWrite', 'hasRole',\n                 'previousAllRead', 'previousAllReadWrite', 'previousRoles',\n                 'dbotCreatedBy', 'isPlayground', 'notifyTime'}\n    filtered = {k: v for\
+    \ k, v in incident.items()\n                if k not in skip_keys and v is not None and v != '' and v != [] and v != {}}\n    return json.dumps(filtered, default=str)\n\n\ndef map_incident_to_alert(incident:\
+    \ dict, elevate_low: bool = False) -> dict:\n    event_timestamp = int(datetime.now(tz=timezone.utc).timestamp() * 1000)\n    severity = map_severity(incident.get('severity', 0), elevate_low)\n    return\
+    \ {\n        'product': 'XSOAR',\n        'vendor': 'Palo Alto Networks',\n        'local_ip': '0.0.0.0',\n        'local_port': 1,\n        'remote_ip': '0.0.0.0',\n        'remote_port': 1,\n    \
+    \    'event_timestamp': event_timestamp,\n        'severity': severity,\n        'alert_name': incident.get('name', ''),\n        'alert_description': build_description(incident),\n        'xsoar_incident_id':\
+    \ str(incident.get('id', '')),\n        'xsoar_incident_type': incident.get('type', ''),\n        'xsoar_incident_owner': incident.get('owner', ''),\n        'xsoar_incident_status': str(incident.get('status',\
+    \ '')),\n        'xsoar_occurred': incident.get('occurred', ''),\n        'xsoar_created': incident.get('created', ''),\n        'xsoar_closed': incident.get('closed', ''),\n        'xsoar_close_reason':\
+    \ incident.get('closeReason', ''),\n        'xsoar_source_brand': incident.get('sourceBrand', ''),\n        'xsoar_source_instance': incident.get('sourceInstance', ''),\n        'xsoar_raw_context':\
+    \ build_raw_context(incident),\n    }\n\n\ndef search_incidents(xsoar_client: XSOAR6Client, query: str | None, max_incidents: int,\n                     from_date: str | None = None, to_date: str |\
+    \ None = None) -> list[dict]:\n    all_incidents: list[dict] = []\n    page = 0\n    while len(all_incidents) < max_incidents:\n        batch_size = min(max_incidents - len(all_incidents), 100)\n  \
+    \      demisto.debug(f'Searching incidents: page={page}, size={batch_size}, query={query}')\n        data = xsoar_client.search_incidents(\n            query=query or '', size=batch_size, page=page,\n\
+    \            from_date=from_date, to_date=to_date,\n        )\n        if not data:\n            break\n        all_incidents.extend(data)\n        if len(data) < batch_size:\n            break\n  \
+    \      page += 1\n    return all_incidents[:max_incidents]\n\n\ndef push_incidents_command(xsiam_client: XSIAMClient, xsoar_client: XSOAR6Client,\n                           args: dict, default_query:\
+    \ str | None,\n                           default_max: int, elevate_low: bool = False) -> CommandResults:\n    query = args.get('query') or default_query\n    max_incidents = arg_to_number(args.get('max_incidents'))\
+    \ or default_max\n    from_date = args.get('from_date')\n    to_date = args.get('to_date')\n\n    incidents = search_incidents(xsoar_client, query, max_incidents, from_date, to_date)\n    if not incidents:\n\
+    \        return CommandResults(\n            readable_output='No incidents found matching the query.',\n            outputs_prefix='XSIAMPush',\n            outputs={'PushedCount': 0, 'Incidents': []},\n\
+    \        )\n\n    alerts = [map_incident_to_alert(inc, elevate_low) for inc in incidents]\n    xsiam_client.insert_parsed_alerts(alerts)\n\n    pushed_summary = [\n        {'ID': inc.get('id', ''),\
+    \ 'Name': inc.get('name', '')}\n        for inc in incidents\n    ]\n    readable = tableToMarkdown(\n        f'Successfully pushed {len(alerts)} incident(s) to XSIAM',\n        pushed_summary, headers=['ID',\
+    \ 'Name'],\n    )\n    return CommandResults(\n        readable_output=readable,\n        outputs_prefix='XSIAMPush',\n        outputs={'PushedCount': len(alerts), 'Incidents': pushed_summary},\n  \
+    \  )\n\n\ndef push_single_incident_command(xsiam_client: XSIAMClient, xsoar_client: XSOAR6Client,\n                                  args: dict, elevate_low: bool = False) -> CommandResults:\n    incident_id\
+    \ = args.get('incident_id')\n    if not incident_id:\n        raise DemistoException('incident_id argument is required.')\n\n    data = xsoar_client.search_incidents(query=f'id:{incident_id}', size=1)\n\
+    \    if not data:\n        raise DemistoException(f'Incident {incident_id} not found.')\n\n    incident = data[0]\n    alert = map_incident_to_alert(incident, elevate_low)\n    xsiam_client.insert_parsed_alerts([alert])\n\
+    \n    pushed_info = {\n        'ID': incident.get('id', ''),\n        'Name': incident.get('name', ''),\n        'Severity': alert['severity'],\n        'AlertName': alert['alert_name'],\n    }\n  \
+    \  readable = tableToMarkdown(\n        f'Successfully pushed incident {incident_id} to XSIAM',\n        pushed_info, headers=['ID', 'Name', 'Severity', 'AlertName'],\n    )\n    return CommandResults(\n\
+    \        readable_output=readable,\n        outputs_prefix='XSIAMPush',\n        outputs={'PushedIncident': pushed_info},\n    )\n\n\ndef sync_new_incidents_command(xsiam_client: XSIAMClient, xsoar_client:\
+    \ XSOAR6Client,\n                               args: dict, default_query: str | None,\n                               default_max: int, elevate_low: bool = False) -> CommandResults:\n    max_incidents\
+    \ = arg_to_number(args.get('max_incidents')) or default_max\n    query = args.get('query') or default_query\n\n    ctx = demisto.getIntegrationContext() or {}\n    last_id = ctx.get('last_synced_id',\
+    \ 0)\n    last_time = ctx.get('last_synced_time', '')\n\n    from_date = args.get('from_date') or last_time or None\n\n    incidents = search_incidents(xsoar_client, query, max_incidents, from_date=from_date)\n\
+    \    if not incidents:\n        return CommandResults(\n            readable_output=f'No new incidents found (last synced ID: {last_id}).',\n            outputs_prefix='XSIAMSync',\n            outputs={'SyncedCount':\
+    \ 0, 'Incidents': [], 'LastSyncedID': last_id},\n        )\n\n    new_incidents = [inc for inc in incidents if int(inc.get('id', 0)) > last_id]\n\n    if not new_incidents:\n        return CommandResults(\n\
+    \            readable_output=f'All incidents already synced (last synced ID: {last_id}).',\n            outputs_prefix='XSIAMSync',\n            outputs={'SyncedCount': 0, 'Incidents': [], 'LastSyncedID':\
+    \ last_id},\n        )\n\n    alerts = [map_incident_to_alert(inc, elevate_low) for inc in new_incidents]\n    xsiam_client.insert_parsed_alerts(alerts)\n\n    new_last_id = max(int(inc.get('id', 0))\
+    \ for inc in new_incidents)\n    new_last_time = max(inc.get('created', '') for inc in new_incidents)\n    ctx['last_synced_id'] = new_last_id\n    ctx['last_synced_time'] = new_last_time\n    demisto.setIntegrationContext(ctx)\n\
+    \n    pushed_summary = [\n        {'ID': inc.get('id', ''), 'Name': inc.get('name', '')}\n        for inc in new_incidents\n    ]\n    readable = tableToMarkdown(\n        f'Synced {len(new_incidents)}\
+    \ new incident(s) to XSIAM (last ID: {new_last_id})',\n        pushed_summary, headers=['ID', 'Name'],\n    )\n    return CommandResults(\n        readable_output=readable,\n        outputs_prefix='XSIAMSync',\n\
+    \        outputs={'SyncedCount': len(new_incidents), 'Incidents': pushed_summary, 'LastSyncedID': new_last_id},\n    )\n\n\ndef reset_sync_command() -> CommandResults:\n    demisto.setIntegrationContext({})\n\
+    \    return CommandResults(readable_output='Sync state has been reset. Next sync will send all incidents.')\n\n\ndef test_module(xsiam_client: XSIAMClient, xsoar_client: XSOAR6Client) -> str:\n    xsoar_client.search_incidents(size=1)\n\
+    \    xsiam_client.insert_parsed_alerts([])\n    return 'ok'\n\n\ndef main() -> None:\n    params = demisto.params()\n    command = demisto.command()\n    args = demisto.args()\n\n    xsiam_url = params.get('xsiam_url',\
+    \ '').rstrip('/')\n    xsiam_api_key = params.get('xsiam_api_key', '')\n    xsiam_api_key_id = params.get('xsiam_api_key_id', '')\n    xsoar_url = params.get('xsoar_url', '').rstrip('/')\n    xsoar_api_key\
+    \ = params.get('xsoar_api_key', '')\n    verify = not argToBoolean(params.get('insecure', False))\n    proxy = argToBoolean(params.get('proxy', False))\n    default_max = arg_to_number(params.get('max_incidents'))\
+    \ or 100\n    default_query = params.get('query')\n    elevate_low = argToBoolean(params.get('elevate_low', False))\n\n    demisto.debug(f'Command being called is {command}')\n\n    try:\n        xsiam_client\
+    \ = XSIAMClient(\n            base_url=xsiam_url, api_key=xsiam_api_key,\n            api_key_id=xsiam_api_key_id, verify=verify, proxy=proxy,\n        )\n        xsoar_client = XSOAR6Client(\n    \
+    \        base_url=xsoar_url, api_key=xsoar_api_key,\n            verify=verify, proxy=proxy,\n        )\n\n        if command == 'test-module':\n            result = test_module(xsiam_client, xsoar_client)\n\
+    \            return_results(result)\n        elif command == 'xsiam-push-incidents':\n            result = push_incidents_command(xsiam_client, xsoar_client, args, default_query, default_max, elevate_low)\n\
+    \            return_results(result)\n        elif command == 'xsiam-push-incident':\n            result = push_single_incident_command(xsiam_client, xsoar_client, args, elevate_low)\n            return_results(result)\n\
+    \        elif command == 'xsiam-sync-new-incidents':\n            result = sync_new_incidents_command(xsiam_client, xsoar_client, args, default_query, default_max, elevate_low)\n            return_results(result)\n\
+    \        elif command == 'xsiam-reset-sync':\n            result = reset_sync_command()\n            return_results(result)\n        else:\n            raise NotImplementedError(f'Command {command}\
+    \ is not implemented.')\n\n    except Exception as e:\n        demisto.error(f'Failed to execute {command} command. Error: {str(e)}')\n        return_error(f'Failed to execute {command} command.\\nError:\\\
+    n{str(e)}')\n\n\nif __name__ in ('__main__', '__builtin__', 'builtins'):\n    main()\n"
+  commands:
+  - name: xsiam-push-incidents
+    description: Push XSOAR incidents matching a query to XSIAM as parsed alerts.
+    arguments:
+    - name: query
+      description: Override the configured incident query filter.
+      required: false
+    - name: max_incidents
+      description: Maximum number of incidents to push.
+      required: false
+      defaultValue: '100'
+    - name: from_date
+      description: Start date for incident search (ISO format, e.g. 2024-01-01T00:00:00Z).
+      required: false
+    - name: to_date
+      description: End date for incident search (ISO format).
+      required: false
+    outputs:
+    - contextPath: XSIAMPush.PushedCount
+      description: Number of incidents pushed.
+      type: Number
+    - contextPath: XSIAMPush.Incidents
+      description: List of pushed incident IDs and names.
+      type: Unknown
+  - name: xsiam-push-incident
+    description: Push a single XSOAR incident to XSIAM as a parsed alert.
+    arguments:
+    - name: incident_id
+      description: The XSOAR incident ID to push.
+      required: true
+    outputs:
+    - contextPath: XSIAMPush.PushedIncident
+      description: Details of the pushed incident.
+      type: Unknown
+  - name: xsiam-sync-new-incidents
+    description: Find and push only new XSOAR incidents that have not been synced yet.
+    arguments:
+    - name: query
+      description: Override the configured incident query filter.
+      required: false
+    - name: max_incidents
+      description: Maximum number of incidents to sync.
+      required: false
+      defaultValue: '100'
+    - name: from_date
+      description: Override the stored sync timestamp (ISO format, e.g. 2024-01-01T00:00:00Z).
+      required: false
+    outputs:
+    - contextPath: XSIAMSync.SyncedCount
+      description: Number of new incidents synced.
+      type: Number
+    - contextPath: XSIAMSync.Incidents
+      description: List of synced incident IDs and names.
+      type: Unknown
+    - contextPath: XSIAMSync.LastSyncedID
+      description: The highest incident ID that has been synced.
+      type: Number
+  - name: xsiam-reset-sync
+    description: Reset the sync state so the next sync will send all incidents.
+    arguments: []
+    outputs: []
+  dockerimage: demisto/python3:3.10.14.100715
+fromversion: 6.0.0
+tests:
+- No tests (auto formatted)

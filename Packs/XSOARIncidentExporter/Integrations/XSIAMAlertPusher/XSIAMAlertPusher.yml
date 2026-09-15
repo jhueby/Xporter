@@ -1,28 +1,38 @@
 commonfields:
-  id: XSIAMAlertPusher
+  id: Xporter
   version: -1
-name: XSIAM Alert Pusher
-display: XSIAM Alert Pusher
+name: Xporter
+display: Xporter
 category: Utilities
 description: Push XSOAR 6 incidents to Cortex XSIAM as parsed alerts via the Insert Parsed Alerts API.
 configuration:
+  - display: XSOAR 6 Server URL
+    name: xsoar_url
+    type: 0
+    required: true
+    additionalinfo: "The local XSOAR 6 server URL (e.g. https://192.168.1.215)"
+  - display: XSOAR 6 API Key
+    name: xsoar_api_key
+    type: 4
+    required: true
   - display: XSIAM API URL
-    name: url
+    name: xsiam_url
     type: 0
     required: true
     additionalinfo: "The XSIAM API URL (e.g. https://api-cs-xsiam.xdr.us.paloaltonetworks.com)"
   - display: XSIAM API Key
-    name: api_key
+    name: xsiam_api_key
     type: 4
     required: true
   - display: XSIAM API Key ID
-    name: api_key_id
+    name: xsiam_api_key_id
     type: 0
     required: true
   - display: Trust any certificate (not secure)
     name: insecure
     type: 8
     required: false
+    defaultvalue: "true"
   - display: Use system proxy settings
     name: proxy
     type: 8
@@ -37,6 +47,11 @@ configuration:
     type: 0
     required: false
     additionalinfo: "XSOAR incident query to filter which incidents to push (e.g. type:Phishing)"
+  - display: Elevate Low severity to Medium
+    name: elevate_low
+    type: 8
+    required: false
+    additionalinfo: "Map Low severity incidents to Medium so they create cases in XSIAM instead of issues only"
 script:
   type: python
   subtype: python3
@@ -75,6 +90,33 @@ script:
         - contextPath: XSIAMPush.PushedIncident
           description: Details of the pushed incident.
           type: Unknown
+    - name: xsiam-sync-new-incidents
+      description: Find and push only new XSOAR incidents that have not been synced yet.
+      arguments:
+        - name: query
+          description: Override the configured incident query filter.
+          required: false
+        - name: max_incidents
+          description: Maximum number of incidents to sync.
+          required: false
+          defaultValue: "100"
+        - name: from_date
+          description: "Override the stored sync timestamp (ISO format, e.g. 2024-01-01T00:00:00Z)."
+          required: false
+      outputs:
+        - contextPath: XSIAMSync.SyncedCount
+          description: Number of new incidents synced.
+          type: Number
+        - contextPath: XSIAMSync.Incidents
+          description: List of synced incident IDs and names.
+          type: Unknown
+        - contextPath: XSIAMSync.LastSyncedID
+          description: The highest incident ID that has been synced.
+          type: Number
+    - name: xsiam-reset-sync
+      description: Reset the sync state so the next sync will send all incidents.
+      arguments: []
+      outputs: []
   dockerimage: demisto/python3:3.10.14.100715
 fromversion: 6.0.0
 tests:
