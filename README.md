@@ -104,7 +104,7 @@ Packs/XSOARIncidentExporter/
 
 ## Installation
 
-1. Copy the `Packs/XSOARIncidentExporter` directory into your content repository or upload via the Marketplace.
+1. Upload the unified `Xporter.yml` file to your XSOAR 6 instance via **Settings → Integrations → Upload Integration**.
 2. Configure the appropriate integration instance with your API credentials.
 3. For the push integration, use `!xsiam-sync-new-incidents` on a scheduled job in XSOAR 6 to continuously push new incidents.
 4. For the pull integration, enable `Fetches incidents` on the XSIAM integration instance.
