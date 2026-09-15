@@ -51,7 +51,7 @@ configuration:
   name: elevate_low
   type: 8
   required: false
-  additionalinfo: Map Low severity incidents to Medium so they create cases in XSIAM instead of issues only
+  additionalinfo: Map Low severity incidents to Medium so they create cases in XSIAM instead of issues only. Only Medium or higher severity alerts will automatically trigger playbooks.
 - display: Timestamp offset (minutes)
   name: timestamp_offset
   type: 0
