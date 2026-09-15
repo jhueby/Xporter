@@ -33,7 +33,7 @@ Pushes XSOAR 6 incidents to XSIAM as parsed alerts via the [Insert Parsed Alerts
 | XSIAM API Key ID | Key ID associated with the API key |
 | Incident query filter | Optional XSOAR query to filter incidents |
 | Maximum incidents per push | Batch size limit (default: 100) |
-| Elevate Low severity to Medium | Map Low severity to Medium so alerts create cases instead of issues only |
+| Elevate Low severity to Medium | Map Low severity to Medium so alerts create cases instead of issues only. Only Medium or higher severity alerts will automatically trigger playbooks |
 | Timestamp offset (minutes) | Minutes to add to the original XSOAR timestamp. The event timestamp defaults to the XSOAR occurred/created time. Use a positive offset to shift old incidents forward. XSIAM silently drops alerts with timestamps too far in the past |
 
 ### 2. XSOAR 6 Incident Collector (Pull — runs on XSIAM)
