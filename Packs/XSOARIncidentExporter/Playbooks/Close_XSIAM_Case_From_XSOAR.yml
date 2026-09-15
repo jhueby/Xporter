@@ -1,4 +1,4 @@
-id: b7c9d2e1-4f5a-4b8c-9d3e-close00xsoar
+id: b7c9d2e1-4f5a-4b8c-9d3e-c10530000001
 version: -1
 vcShouldKeepItemLegacyProdMachine: false
 aclrelations: []
@@ -7,11 +7,6 @@ aclowner:
   type: ""
   name: ""
 name: Close XSIAM Case From XSOAR
-description: |-
-  Runs on XSIAM when an alert from XSOAR is ingested.
-  Extracts the Close Reason and Close Notes from the XSOAR incident data.
-  If the XSOAR incident was closed, closes the XSIAM case with the same reason and notes.
-  Attach this playbook to incidents with source "Palo Alto Networks - XSOAR".
 tags:
 - xsoar
 - xsiam
@@ -117,7 +112,7 @@ view: |-
     "linkLabelsPosition": {},
     "paper": {
       "dimensions": {
-        "height": 420,
+        "height": 600,
         "width": 380,
         "x": 50,
         "y": 50
