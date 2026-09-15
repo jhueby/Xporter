@@ -1,36 +1,43 @@
-id: close-xsiam-case-from-xsoar
+id: b7c9d2e1-4f5a-4b8c-9d3e-close00xsoar
 version: -1
+vcShouldKeepItemLegacyProdMachine: false
+aclrelations: []
+aclowner:
+  id: ""
+  type: ""
+  name: ""
 name: Close XSIAM Case From XSOAR
 description: |-
   Runs on XSIAM when an alert from XSOAR is ingested.
   Extracts the Close Reason and Close Notes from the XSOAR incident data.
   If the XSOAR incident was closed, closes the XSIAM case with the same reason and notes.
   Attach this playbook to incidents with source "Palo Alto Networks - XSOAR".
+tags:
+- xsoar
+- xsiam
 starttaskid: "0"
-inputs: []
-outputs: []
-quiet: true
-sourceplaybookid: close-xsiam-case-from-xsoar
 tasks:
   "0":
     id: "0"
-    taskid: a1b2c3d4-0000-4000-8000-000000000000
+    taskid: 60e48700-a1b2-4c3d-8e4f-000000000000
     type: start
     task:
-      id: a1b2c3d4-0000-4000-8000-000000000000
+      id: 60e48700-a1b2-4c3d-8e4f-000000000000
       version: -1
       name: ""
       iscommand: false
       brand: ""
-      description: ""
+      playbooktaskmissingcomponent: null
+      istaskmissingcomponenterrordismissed: false
     nexttasks:
       '#none#':
       - "1"
     separatecontext: false
+    continueonerrortype: ""
     view: |-
       {
         "position": {
-          "x": 450,
+          "x": 50,
           "y": 50
         }
       }
@@ -43,10 +50,10 @@ tasks:
     isautoswitchedtoquietmode: false
   "1":
     id: "1"
-    taskid: a1b2c3d4-0000-4000-8000-000000000001
+    taskid: 8904d400-b2c3-4d4e-8f5a-000000000001
     type: regular
     task:
-      id: a1b2c3d4-0000-4000-8000-000000000001
+      id: 8904d400-b2c3-4d4e-8f5a-000000000001
       version: -1
       name: Close From XSOAR
       description: Extract XSOAR close reason and notes, close case if applicable.
@@ -54,15 +61,18 @@ tasks:
       type: regular
       iscommand: false
       brand: ""
+      playbooktaskmissingcomponent: null
+      istaskmissingcomponenterrordismissed: false
     nexttasks:
       '#none#':
       - "2"
     separatecontext: false
+    continueonerrortype: ""
     view: |-
       {
         "position": {
-          "x": 450,
-          "y": 250
+          "x": 50,
+          "y": 220
         }
       }
     note: false
@@ -74,22 +84,24 @@ tasks:
     isautoswitchedtoquietmode: false
   "2":
     id: "2"
-    taskid: a1b2c3d4-0000-4000-8000-000000000002
+    taskid: af6db000-c3d4-4e5f-8a6b-000000000002
     type: title
     task:
-      id: a1b2c3d4-0000-4000-8000-000000000002
+      id: af6db000-c3d4-4e5f-8a6b-000000000002
       version: -1
       name: Done
       type: title
       iscommand: false
       brand: ""
-      description: ""
+      playbooktaskmissingcomponent: null
+      istaskmissingcomponenterrordismissed: false
     separatecontext: false
+    continueonerrortype: ""
     view: |-
       {
         "position": {
-          "x": 450,
-          "y": 450
+          "x": 50,
+          "y": 405
         }
       }
     note: false
@@ -99,6 +111,20 @@ tasks:
     quietmode: 0
     isoversize: false
     isautoswitchedtoquietmode: false
-fromversion: 6.0.0
-tests:
-- No tests (auto formatted)
+outlinetasks: {}
+view: |-
+  {
+    "linkLabelsPosition": {},
+    "paper": {
+      "dimensions": {
+        "height": 420,
+        "width": 380,
+        "x": 50,
+        "y": 50
+      }
+    }
+  }
+inputs: []
+outputs: []
+adopted: true
+possibleresponses: []
