@@ -9,13 +9,15 @@ description: |-
 starttaskid: "0"
 inputs: []
 outputs: []
+quiet: true
+sourceplaybookid: close-xsiam-case-from-xsoar
 tasks:
   "0":
     id: "0"
-    taskid: d4a0e1f2-1a2b-3c4d-5e6f-000000000000
+    taskid: a1b2c3d4-0000-4000-8000-000000000000
     type: start
     task:
-      id: d4a0e1f2-1a2b-3c4d-5e6f-000000000000
+      id: a1b2c3d4-0000-4000-8000-000000000000
       version: -1
       name: ""
       iscommand: false
@@ -23,9 +25,8 @@ tasks:
       description: ""
     nexttasks:
       '#none#':
-        - "1"
+      - "1"
     separatecontext: false
-    continueonerrortype: ""
     view: |-
       {
         "position": {
@@ -33,12 +34,19 @@ tasks:
           "y": 50
         }
       }
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
   "1":
     id: "1"
-    taskid: d4a0e1f2-1a2b-3c4d-5e6f-000000000001
+    taskid: a1b2c3d4-0000-4000-8000-000000000001
     type: regular
     task:
-      id: d4a0e1f2-1a2b-3c4d-5e6f-000000000001
+      id: a1b2c3d4-0000-4000-8000-000000000001
       version: -1
       name: Close From XSOAR
       description: Extract XSOAR close reason and notes, close case if applicable.
@@ -48,9 +56,8 @@ tasks:
       brand: ""
     nexttasks:
       '#none#':
-        - "2"
+      - "2"
     separatecontext: false
-    continueonerrortype: ""
     view: |-
       {
         "position": {
@@ -58,12 +65,19 @@ tasks:
           "y": 250
         }
       }
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
   "2":
     id: "2"
-    taskid: d4a0e1f2-1a2b-3c4d-5e6f-000000000002
+    taskid: a1b2c3d4-0000-4000-8000-000000000002
     type: title
     task:
-      id: d4a0e1f2-1a2b-3c4d-5e6f-000000000002
+      id: a1b2c3d4-0000-4000-8000-000000000002
       version: -1
       name: Done
       type: title
@@ -71,7 +85,6 @@ tasks:
       brand: ""
       description: ""
     separatecontext: false
-    continueonerrortype: ""
     view: |-
       {
         "position": {
@@ -79,6 +92,13 @@ tasks:
           "y": 450
         }
       }
+    note: false
+    timertriggers: []
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
 fromversion: 6.0.0
 tests:
-  - No tests (auto formatted)
+- No tests (auto formatted)
