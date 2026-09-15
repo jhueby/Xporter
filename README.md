@@ -10,8 +10,10 @@ Pushes XSOAR 6 incidents to XSIAM as parsed alerts via the [Insert Parsed Alerts
 
 **How it works:**
 - Queries XSOAR 6 for incidents matching a configurable filter
-- Maps each incident to the XSIAM parsed alert schema (severity, timestamps, description)
+- Maps each incident to the XSIAM parsed alert schema with full incident context (custom fields, labels, close status, raw JSON)
+- Event timestamp maps to the original XSOAR occurred/created time (adjustable via timestamp offset)
 - Posts the alerts to XSIAM where they are ingested and grouped into incidents automatically
+- Tracks sync state for incremental pushes — only sends new incidents each run
 
 **Commands:**
 | Command | Description |
@@ -24,11 +26,15 @@ Pushes XSOAR 6 incidents to XSIAM as parsed alerts via the [Insert Parsed Alerts
 **Configuration:**
 | Parameter | Description |
 |---|---|
+| XSOAR 6 Server URL | URL of the XSOAR 6 instance (e.g. `https://192.168.1.215/`) |
+| XSOAR 6 API Key | XSOAR 6 API key for authentication |
 | XSIAM API URL | Your XSIAM tenant API URL |
 | XSIAM API Key | API key for authentication |
 | XSIAM API Key ID | Key ID associated with the API key |
 | Incident query filter | Optional XSOAR query to filter incidents |
 | Maximum incidents per push | Batch size limit (default: 100) |
+| Elevate Low severity to Medium | Map Low severity to Medium so alerts create cases instead of issues only |
+| Timestamp offset (minutes) | Minutes to add to the original XSOAR timestamp. The event timestamp defaults to the XSOAR occurred/created time. Use a positive offset to shift old incidents forward. XSIAM silently drops alerts with timestamps too far in the past |
 
 ### 2. XSOAR 6 Incident Collector (Pull — runs on XSIAM)
 
