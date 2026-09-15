@@ -149,8 +149,9 @@ def build_raw_context(incident: dict) -> str:
 
 
 def map_incident_to_alert(incident: dict, elevate_low: bool = False, timestamp_offset: int = 0) -> dict:
-    ts = datetime.now(tz=timezone.utc) - timedelta(minutes=timestamp_offset)
-    event_timestamp = int(ts.timestamp() * 1000)
+    event_timestamp = parse_date_to_epoch_ms(incident.get('occurred') or incident.get('created'))
+    if timestamp_offset:
+        event_timestamp += timestamp_offset * 60 * 1000
     severity = map_severity(incident.get('severity', 0), elevate_low)
     return {
         'product': 'XSOAR',

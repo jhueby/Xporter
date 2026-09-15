@@ -57,7 +57,7 @@ configuration:
     type: 0
     required: false
     defaultvalue: "0"
-    additionalinfo: "Number of minutes to subtract from the current time for the alert event timestamp. Use this to shift observation time (e.g. 5 = 5 minutes ago, 0 = now)."
+    additionalinfo: "Minutes to add to the original XSOAR incident timestamp. The event timestamp defaults to the XSOAR occurred/created time. Use a positive offset to shift forward (e.g. old incidents closer to current time). XSIAM drops alerts with timestamps too far in the past."
 script:
   type: python
   subtype: python3
