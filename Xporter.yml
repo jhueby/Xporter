@@ -62,20 +62,20 @@ configuration:
 script:
   type: python
   subtype: python3
-  script: "import json\nfrom datetime import datetime, timedelta, timezone\nfrom typing import Any\n\nSEVERITY_MAP = {\n    0: 'Low',\n    1: 'Low',\n    2: 'Medium',\n    3: 'High',\n    4: 'Critical',\n\
-    }\n\n\nclass XSIAMClient(BaseClient):\n\n    def __init__(self, base_url: str, api_key: str, api_key_id: str, verify: bool, proxy: bool):\n        headers = {\n            'x-xdr-auth-id': api_key_id,\n\
-    \            'Authorization': api_key,\n            'Content-Type': 'application/json',\n        }\n        super().__init__(base_url=base_url, verify=verify, proxy=proxy, headers=headers)\n\n    def\
-    \ insert_parsed_alerts(self, alerts: list) -> dict:\n        body = {'request_data': {'alerts': alerts}}\n        demisto.debug(f'Inserting {len(alerts)} parsed alert(s) into XSIAM')\n        return\
-    \ self._http_request(\n            method='POST',\n            url_suffix='/public_api/v1/alerts/insert_parsed_alerts',\n            json_data=body,\n        )\n\n\nclass XSOAR6Client(BaseClient):\n\
-    \n    def __init__(self, base_url: str, api_key: str, verify: bool, proxy: bool):\n        headers = {\n            'Authorization': api_key,\n            'Content-Type': 'application/json',\n     \
-    \       'Accept': 'application/json',\n        }\n        super().__init__(base_url=base_url, verify=verify, proxy=proxy, headers=headers)\n\n    def search_incidents(self, query: str = '', size: int\
-    \ = 100, page: int = 0,\n                         from_date: str | None = None, to_date: str | None = None) -> list:\n        filter_body: dict[str, Any] = {}\n        if query:\n            filter_body['query']\
-    \ = query\n        if from_date:\n            filter_body['fromDate'] = from_date\n        if to_date:\n            filter_body['toDate'] = to_date\n\n        body: dict[str, Any] = {\n            'filter':\
-    \ filter_body,\n            'page': page,\n            'size': size,\n            'sort': [{'field': 'created', 'asc': True}],\n        }\n        response = self._http_request(\n            method='POST',\n\
-    \            url_suffix='/incidents/search',\n            json_data=body,\n        )\n        return response.get('data') or []\n\n\ndef map_severity(xsoar_severity: int, elevate_low: bool = False)\
-    \ -> str:\n    severity = SEVERITY_MAP.get(xsoar_severity, 'Low')\n    if elevate_low and severity == 'Low':\n        return 'Medium'\n    return severity\n\n\ndef parse_date_to_epoch_ms(date_str: str\
-    \ | None) -> int:\n    if not date_str:\n        return int(datetime.now(tz=timezone.utc).timestamp() * 1000)\n    try:\n        dt = arg_to_datetime(date_str)\n        if dt:\n            return int(dt.timestamp()\
-    \ * 1000)\n    except Exception:\n        demisto.debug(f'Failed to parse date string: {date_str}')\n    return int(datetime.now(tz=timezone.utc).timestamp() * 1000)\n\n\ndef build_description(incident:\
+  script: "import json\nimport traceback\nimport urllib3\nfrom datetime import datetime, timezone\nfrom typing import Any\n\nurllib3.disable_warnings()\n\nSEVERITY_MAP = {\n    0: 'Low',\n    1: 'Low',\n\
+    \    2: 'Medium',\n    3: 'High',\n    4: 'Critical',\n}\n\n\nclass XSIAMClient(BaseClient):\n\n    def __init__(self, base_url: str, api_key: str, api_key_id: str, verify: bool, proxy: bool):\n   \
+    \     headers = {\n            'x-xdr-auth-id': api_key_id,\n            'Authorization': api_key,\n            'Content-Type': 'application/json',\n        }\n        super().__init__(base_url=base_url,\
+    \ verify=verify, proxy=proxy, headers=headers)\n\n    def insert_parsed_alerts(self, alerts: list) -> dict:\n        body = {'request_data': {'alerts': alerts}}\n        demisto.debug(f'Inserting {len(alerts)}\
+    \ parsed alert(s) into XSIAM')\n        return self._http_request(\n            method='POST',\n            url_suffix='/public_api/v1/alerts/insert_parsed_alerts',\n            json_data=body,\n  \
+    \      )\n\n\nclass XSOAR6Client(BaseClient):\n\n    def __init__(self, base_url: str, api_key: str, verify: bool, proxy: bool):\n        headers = {\n            'Authorization': api_key,\n       \
+    \     'Content-Type': 'application/json',\n            'Accept': 'application/json',\n        }\n        super().__init__(base_url=base_url, verify=verify, proxy=proxy, headers=headers)\n\n    def search_incidents(self,\
+    \ query: str = '', size: int = 100, page: int = 0,\n                         from_date: str | None = None, to_date: str | None = None) -> list:\n        filter_body: dict[str, Any] = {}\n        if\
+    \ query:\n            filter_body['query'] = query\n        if from_date:\n            filter_body['fromDate'] = from_date\n        if to_date:\n            filter_body['toDate'] = to_date\n\n     \
+    \   body: dict[str, Any] = {\n            'filter': filter_body,\n            'page': page,\n            'size': size,\n            'sort': [{'field': 'created', 'asc': True}],\n        }\n        response\
+    \ = self._http_request(\n            method='POST',\n            url_suffix='/incidents/search',\n            json_data=body,\n        )\n        return response.get('data') or []\n\n\ndef map_severity(xsoar_severity:\
+    \ int, elevate_low: bool = False) -> str:\n    severity = SEVERITY_MAP.get(xsoar_severity, 'Low')\n    if elevate_low and severity == 'Low':\n        return 'Medium'\n    return severity\n\n\ndef parse_date_to_epoch_ms(date_str:\
+    \ str | None) -> int:\n    if not date_str:\n        return int(datetime.now(tz=timezone.utc).timestamp() * 1000)\n    try:\n        dt = arg_to_datetime(date_str)\n        if dt:\n            return\
+    \ int(dt.timestamp() * 1000)\n    except Exception:\n        demisto.debug(f'Failed to parse date string: {date_str}')\n    return int(datetime.now(tz=timezone.utc).timestamp() * 1000)\n\n\ndef build_description(incident:\
     \ dict) -> str:\n    status_names = {0: 'Active', 1: 'Done', 2: 'Archive'}\n    severity_names = {0: 'Unknown', 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Critical'}\n    lines: list[str] = []\n\n    lines.append(f'XSOAR\
     \ Incident ID: {incident.get(\"id\", \"\")}')\n    lines.append(f'Name: {incident.get(\"name\", \"\")}')\n    lines.append(f'Type: {incident.get(\"type\", \"\")}')\n    status_val = incident.get('status')\n\
     \    lines.append(f'Status: {status_names.get(status_val, str(status_val))}')\n    sev = incident.get('severity', 0)\n    lines.append(f'Severity: {severity_names.get(sev, str(sev))}')\n    lines.append(f'Owner:\
@@ -127,8 +127,8 @@ script:
     \        pushed_summary, headers=['ID', 'Name'],\n    )\n    return CommandResults(\n        readable_output=readable,\n        outputs_prefix='XSIAMSync',\n        outputs={'SyncedCount': len(new_incidents),\
     \ 'Incidents': pushed_summary, 'LastSyncedID': new_last_id},\n    )\n\n\ndef reset_sync_command() -> CommandResults:\n    demisto.setIntegrationContext({})\n    return CommandResults(readable_output='Sync\
     \ state has been reset. Next sync will send all incidents.')\n\n\ndef test_module(xsiam_client: XSIAMClient, xsoar_client: XSOAR6Client) -> str:\n    xsoar_client.search_incidents(size=1)\n    xsiam_client.insert_parsed_alerts([])\n\
-    \    return 'ok'\n\n\ndef main() -> None:\n    params = demisto.params()\n    command = demisto.command()\n    args = demisto.args()\n\n    xsiam_url = params.get('xsiam_url', '').rstrip('/')\n    xsiam_api_key\
-    \ = params.get('xsiam_api_key', '')\n    xsiam_api_key_id = params.get('xsiam_api_key_id', '')\n    xsoar_url = params.get('xsoar_url', '').rstrip('/')\n    xsoar_api_key = params.get('xsoar_api_key',\
+    \    return 'ok'\n\n\ndef main() -> None:  # pragma: no cover\n    params = demisto.params()\n    command = demisto.command()\n    args = demisto.args()\n\n    xsiam_url = params.get('xsiam_url', '').rstrip('/')\n\
+    \    xsiam_api_key = params.get('xsiam_api_key', '')\n    xsiam_api_key_id = params.get('xsiam_api_key_id', '')\n    xsoar_url = params.get('xsoar_url', '').rstrip('/')\n    xsoar_api_key = params.get('xsoar_api_key',\
     \ '')\n    verify = not argToBoolean(params.get('insecure', False))\n    proxy = argToBoolean(params.get('proxy', False))\n    default_max = arg_to_number(params.get('max_incidents')) or 100\n    default_query\
     \ = params.get('query')\n    elevate_low = argToBoolean(params.get('elevate_low', False))\n    timestamp_offset = arg_to_number(params.get('timestamp_offset')) or 0\n\n    demisto.debug(f'Command being\
     \ called is {command}')\n\n    try:\n        xsiam_client = XSIAMClient(\n            base_url=xsiam_url, api_key=xsiam_api_key,\n            api_key_id=xsiam_api_key_id, verify=verify, proxy=proxy,\n\
@@ -137,8 +137,8 @@ script:
     \ xsoar_client, args, default_query, default_max, elevate_low, timestamp_offset)\n            return_results(result)\n        elif command == 'xsiam-push-incident':\n            result = push_single_incident_command(xsiam_client,\
     \ xsoar_client, args, elevate_low, timestamp_offset)\n            return_results(result)\n        elif command == 'xsiam-sync-new-incidents':\n            result = sync_new_incidents_command(xsiam_client,\
     \ xsoar_client, args, default_query, default_max, elevate_low, timestamp_offset)\n            return_results(result)\n        elif command == 'xsiam-reset-sync':\n            result = reset_sync_command()\n\
-    \            return_results(result)\n        else:\n            raise NotImplementedError(f'Command {command} is not implemented.')\n\n    except Exception as e:\n        demisto.error(f'Failed to execute\
-    \ {command} command. Error: {str(e)}')\n        return_error(f'Failed to execute {command} command.\\nError:\\n{str(e)}')\n\n\nif __name__ in ('__main__', '__builtin__', 'builtins'):\n    main()\n"
+    \            return_results(result)\n        else:\n            raise NotImplementedError(f'Command {command} is not implemented.')\n\n    except Exception as e:\n        demisto.error(traceback.format_exc())\n\
+    \        return_error(f'Failed to execute {command} command.\\nError:\\n{traceback.format_exc()}')\n\n\nif __name__ in ('__main__', '__builtin__', 'builtins'):\n    main()\n"
   commands:
   - name: xsiam-push-incidents
     description: Push XSOAR incidents matching a query to XSIAM as parsed alerts.

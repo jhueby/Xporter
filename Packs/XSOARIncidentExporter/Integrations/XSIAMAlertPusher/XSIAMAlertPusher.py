@@ -1,9 +1,14 @@
 import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
+from CommonServerUserPython import *  # noqa: F401
 
 import json
-from datetime import datetime, timedelta, timezone
+import traceback
+import urllib3
+from datetime import datetime, timezone
 from typing import Any
+
+urllib3.disable_warnings()
 
 SEVERITY_MAP = {
     0: 'Low',
@@ -330,16 +335,16 @@ def test_module(xsiam_client: XSIAMClient, xsoar_client: XSOAR6Client) -> str:
     return 'ok'
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover
     params = demisto.params()
     command = demisto.command()
     args = demisto.args()
 
     xsiam_url = params.get('xsiam_url', '').rstrip('/')
-    xsiam_api_key = params.get('xsiam_api_key', '')
+    xsiam_api_key = (params.get('xsiam_api_key') or {}).get('password', '')
     xsiam_api_key_id = params.get('xsiam_api_key_id', '')
     xsoar_url = params.get('xsoar_url', '').rstrip('/')
-    xsoar_api_key = params.get('xsoar_api_key', '')
+    xsoar_api_key = (params.get('xsoar_api_key') or {}).get('password', '')
     verify = not argToBoolean(params.get('insecure', False))
     proxy = argToBoolean(params.get('proxy', False))
     default_max = arg_to_number(params.get('max_incidents')) or 100
@@ -378,8 +383,8 @@ def main() -> None:
             raise NotImplementedError(f'Command {command} is not implemented.')
 
     except Exception as e:
-        demisto.error(f'Failed to execute {command} command. Error: {str(e)}')
-        return_error(f'Failed to execute {command} command.\nError:\n{str(e)}')
+        demisto.error(traceback.format_exc())
+        return_error(f'Failed to execute {command} command.\nError:\n{traceback.format_exc()}')
 
 
 if __name__ in ('__main__', '__builtin__', 'builtins'):

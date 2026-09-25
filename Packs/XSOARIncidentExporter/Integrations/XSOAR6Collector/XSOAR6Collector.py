@@ -1,16 +1,16 @@
 import demistomock as demisto  # noqa: F401
 from CommonServerPython import *  # noqa: F401
+from CommonServerUserPython import *  # noqa: F401
 
 import json
+import traceback
+import urllib3
 from typing import Any
 
+urllib3.disable_warnings()
 
-# ──────────────────────────────────────────────────────────────
-# Client
-# ──────────────────────────────────────────────────────────────
 
 class XSOAR6Client(BaseClient):
-    """Client for communicating with a remote Cortex XSOAR 6 instance."""
 
     def __init__(self, base_url: str, api_key: str, verify: bool, proxy: bool):
         headers = {
@@ -33,10 +33,6 @@ class XSOAR6Client(BaseClient):
         size: int = 50,
         page: int = 0,
     ) -> list:
-        """Search incidents on the remote XSOAR 6 instance.
-
-        Returns a list of incident dicts (may be empty).
-        """
         filter_body: dict[str, Any] = {}
         if query:
             filter_body["query"] = query
@@ -61,12 +57,10 @@ class XSOAR6Client(BaseClient):
         return response.get("data") or []
 
     def get_incident(self, incident_id: str) -> dict | None:
-        """Retrieve a single incident by its ID."""
         incidents = self.search_incidents(query=f"id:{incident_id}", size=1)
         return incidents[0] if incidents else None
 
     def get_incident_entries(self, incident_id: str) -> list:
-        """Retrieve war-room entries for a given incident/investigation."""
         try:
             response = self._http_request(
                 method="POST",
@@ -79,12 +73,7 @@ class XSOAR6Client(BaseClient):
             return []
 
 
-# ──────────────────────────────────────────────────────────────
-# Helpers
-# ──────────────────────────────────────────────────────────────
-
 def map_xsoar_incident_to_xsiam(incident: dict, incident_type: str | None = None) -> dict:
-    """Convert an XSOAR 6 incident dict into the format expected by demisto.incidents()."""
     mapped: dict[str, Any] = {
         "name": incident.get("name", ""),
         "occurred": incident.get("occurred") or incident.get("created", ""),
@@ -105,12 +94,7 @@ def map_xsoar_incident_to_xsiam(incident: dict, incident_type: str | None = None
     return mapped
 
 
-# ──────────────────────────────────────────────────────────────
-# Commands
-# ──────────────────────────────────────────────────────────────
-
 def test_module(client: XSOAR6Client) -> str:
-    """Validate connectivity and credentials by running a minimal search."""
     try:
         client.search_incidents(size=1)
         return "ok"
@@ -125,7 +109,6 @@ def fetch_incidents(
     query: str,
     incident_type: str | None,
 ) -> None:
-    """Fetch incidents from XSOAR 6 and push them into XSIAM."""
     last_run = demisto.getLastRun() or {}
     last_fetch_ts: str | None = last_run.get("last_fetch")
     last_fetched_ids: list[str] = last_run.get("last_fetched_ids", [])
@@ -186,7 +169,6 @@ def fetch_incidents(
 
 
 def get_incidents_command(client: XSOAR6Client, args: dict) -> CommandResults:
-    """Manual command: search incidents on the remote XSOAR 6."""
     query = args.get("query", "")
     limit = arg_to_number(args.get("limit", "50")) or 50
     from_date = args.get("from_date")
@@ -219,11 +201,11 @@ def get_incidents_command(client: XSOAR6Client, args: dict) -> CommandResults:
         outputs_prefix="XSOAR6.Incidents",
         outputs_key_field="id",
         outputs=incidents,
+        raw_response=incidents,
     )
 
 
 def get_incident_command(client: XSOAR6Client, args: dict) -> CommandResults:
-    """Manual command: retrieve a single incident by ID."""
     incident_id = args.get("incident_id", "")
     if not incident_id:
         raise DemistoException("incident_id is required.")
@@ -243,12 +225,10 @@ def get_incident_command(client: XSOAR6Client, args: dict) -> CommandResults:
         outputs_prefix="XSOAR6.Incident",
         outputs_key_field="id",
         outputs=incident,
+        raw_response=incident,
     )
 
 
-# ──────────────────────────────────────────────────────────────
-# Main
-# ──────────────────────────────────────────────────────────────
 
 def main() -> None:  # pragma: no cover
     params = demisto.params()
@@ -256,7 +236,8 @@ def main() -> None:  # pragma: no cover
     args = demisto.args()
 
     base_url = params.get("url", "").rstrip("/")
-    api_key = params.get("api_key", "")
+    api_creds = params.get("api_key", {})
+    api_key = api_creds.get("password", "") if isinstance(api_creds, dict) else api_creds
     verify = not argToBoolean(params.get("insecure", True))
     proxy = argToBoolean(params.get("proxy", False))
     max_fetch = arg_to_number(params.get("max_fetch", "50")) or 50

@@ -15,7 +15,7 @@ This integration runs on Cortex XSIAM and fetches incidents from a remote Cortex
 
 ### Configuration Notes
 
-- **Trust any certificate** defaults to enabled because XSOAR 6 commonly uses self-signed certificates. Disable this only if the XSOAR 6 server has a valid CA-signed certificate.
+- **Trust any certificate** is disabled by default. Enable it if the XSOAR 6 server uses a self-signed certificate.
 - **Incident query filter** accepts the same query syntax used in the XSOAR 6 incidents search bar (e.g., `type:Phishing`, `severity:high`, `status:active`).
 - **First fetch time** controls how far back the initial fetch looks for incidents. Subsequent fetches only retrieve incidents created after the last successful fetch.
 
