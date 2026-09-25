@@ -1,15 +1,15 @@
-# xporter — XSOAR 6 to XSIAM Incident Exporter
+# xporter — XSOAR to XSIAM Incident Exporter
 
-Content pack for exporting Cortex XSOAR 6 incidents into Cortex XSIAM. Includes two integrations covering both push and pull workflows.
+Content pack for exporting Cortex XSOAR 6 or XSOAR 8 incidents into Cortex XSIAM. Includes two integrations covering both push and pull workflows.
 
 ## Integrations
 
-### 1. XSIAM Alert Pusher (Push — runs on XSOAR 6)
+### 1. XSIAM Alert Pusher (Push — runs on XSOAR 6 or 8)
 
-Pushes XSOAR 6 incidents to XSIAM as parsed alerts via the [Insert Parsed Alerts API](https://docs-cortex.paloaltonetworks.com/r/Cortex-XSIAM/Cortex-XSIAM-API-Reference/Insert-Parsed-Alerts).
+Pushes XSOAR incidents to XSIAM as parsed alerts via the [Insert Parsed Alerts API](https://docs-cortex.paloaltonetworks.com/r/Cortex-XSIAM/Cortex-XSIAM-API-Reference/Insert-Parsed-Alerts). Compatible with both XSOAR 6 (on-prem) and XSOAR 8 (cloud).
 
 **How it works:**
-- Queries XSOAR 6 for incidents matching a configurable filter
+- Queries XSOAR for incidents matching a configurable filter
 - Maps each incident to the XSIAM parsed alert schema with full incident context (custom fields, labels, close status, raw JSON)
 - Event timestamp maps to the original XSOAR occurred/created time (adjustable via timestamp offset)
 - Posts the alerts to XSIAM where they are ingested and grouped into incidents automatically
@@ -26,8 +26,9 @@ Pushes XSOAR 6 incidents to XSIAM as parsed alerts via the [Insert Parsed Alerts
 **Configuration:**
 | Parameter | Description |
 |---|---|
-| XSOAR 6 Server URL | URL of the XSOAR 6 instance (e.g. `https://192.168.1.215/`) |
-| XSOAR 6 API Key | XSOAR 6 API key for authentication |
+| XSOAR Server URL | URL of the XSOAR instance. XSOAR 6: `https://192.168.1.215/`. XSOAR 8: `https://api-{tenant}.xdr.us.paloaltonetworks.com` |
+| XSOAR API Key | XSOAR API key for authentication |
+| XSOAR API Key ID | XSOAR 8 only — the numeric API Key ID. Leave blank for XSOAR 6 |
 | XSIAM API URL | Your XSIAM tenant API URL |
 | XSIAM API Key | API key for authentication |
 | XSIAM API Key ID | Key ID associated with the API key |
@@ -36,27 +37,28 @@ Pushes XSOAR 6 incidents to XSIAM as parsed alerts via the [Insert Parsed Alerts
 | Elevate Low severity to Medium | Map Low severity to Medium so alerts create cases instead of issues only. Only Medium or higher severity alerts will automatically trigger playbooks |
 | Timestamp offset (minutes) | Minutes to add to the original XSOAR timestamp. The event timestamp defaults to the XSOAR occurred/created time. Use a positive offset to shift old incidents forward. XSIAM silently drops alerts with timestamps too far in the past |
 
-### 2. XSOAR 6 Incident Collector (Pull — runs on XSIAM)
+### 2. XSOAR Incident Collector (Pull — runs on XSIAM)
 
-Runs on XSIAM and fetches incidents from a remote XSOAR 6 instance via the XSOAR 6 REST API.
+Runs on XSIAM and fetches incidents from a remote XSOAR 6 or XSOAR 8 instance via the XSOAR REST API.
 
 **How it works:**
-- Connects to the XSOAR 6 `/incidents/search` endpoint on a schedule
+- Connects to the XSOAR `/incidents/search` endpoint on a schedule (auto-detects XSOAR 6 vs 8 API paths)
 - Fetches incidents created since the last successful run
-- Maps them to XSIAM incidents with original XSOAR 6 metadata preserved in custom fields
+- Maps them to XSIAM incidents with original XSOAR metadata preserved in custom fields
 - Handles deduplication across fetch cycles
 
 **Commands:**
 | Command | Description |
 |---|---|
-| `!xsoar6-get-incidents` | Search incidents on the remote XSOAR 6 |
+| `!xsoar6-get-incidents` | Search incidents on the remote XSOAR instance |
 | `!xsoar6-get-incident` | Get a specific incident by ID |
 
 **Configuration:**
 | Parameter | Description |
 |---|---|
-| XSOAR 6 Server URL | URL of the XSOAR 6 instance |
-| XSOAR 6 API Key | API key for authentication |
+| XSOAR Server URL | URL of the XSOAR instance. XSOAR 6: `https://{server-ip}`. XSOAR 8: `https://api-{tenant}.xdr.us.paloaltonetworks.com` |
+| XSOAR API Key | API key for authentication |
+| XSOAR API Key ID | XSOAR 8 only — the numeric API Key ID. Leave blank for XSOAR 6 |
 | First fetch time | How far back to look on first run (default: 3 days) |
 | Maximum incidents per fetch | Batch size limit (default: 50) |
 | Incident query filter | Optional XSOAR query to filter incidents |
@@ -66,10 +68,10 @@ Runs on XSIAM and fetches incidents from a remote XSOAR 6 instance via the XSOAR
 
 | Scenario | Recommended Integration |
 |---|---|
-| XSOAR 6 can reach XSIAM (outbound HTTPS) | **XSIAM Alert Pusher** (push) |
-| XSIAM can reach XSOAR 6 (inbound HTTPS or Broker VM) | **XSOAR 6 Incident Collector** (pull) |
+| XSOAR can reach XSIAM (outbound HTTPS) | **XSIAM Alert Pusher** (push) |
+| XSIAM can reach XSOAR (inbound HTTPS or Broker VM) | **XSOAR Incident Collector** (pull) |
 | Want incidents as XSIAM alerts with auto-grouping | **XSIAM Alert Pusher** (push) |
-| Want incidents directly as XSIAM incidents | **XSOAR 6 Incident Collector** (pull) |
+| Want incidents directly as XSIAM incidents | **XSOAR Incident Collector** (pull) |
 | Need on-demand / manual export | **XSIAM Alert Pusher** (push) |
 | Need continuous automatic sync | Either — both support scheduled operation |
 
@@ -112,14 +114,15 @@ Packs/XSOARIncidentExporter/
 
 ### Step 1 — Install the Integration
 
-Upload the unified `Xporter.yml` file to your XSOAR 6 instance via **Settings → Integrations → Upload Integration**.
+Upload the unified `Xporter.yml` file to your XSOAR instance via **Settings → Integrations → Upload Integration**.
 
 ### Step 2 — Configure the Instance
 
 Create a new instance of the **Xporter** integration and fill in:
 
-- **XSOAR 6 Server URL** — e.g. `https://192.168.1.215/` (include trailing slash)
-- **XSOAR 6 API Key**
+- **XSOAR Server URL** — XSOAR 6: `https://192.168.1.215/`. XSOAR 8: `https://api-{tenant}.xdr.us.paloaltonetworks.com`
+- **XSOAR API Key**
+- **XSOAR API Key ID** — XSOAR 8 only. Leave blank for XSOAR 6
 - **XSIAM API URL** — e.g. `https://api-{tenant}.xdr.us.paloaltonetworks.com`
 - **XSIAM API Key** and **XSIAM API Key ID**
 - **Elevate Low severity to Medium** — check this if you want all incidents to create cases and trigger playbooks in XSIAM. Only Medium or higher severity alerts automatically trigger playbooks.
@@ -127,7 +130,7 @@ Create a new instance of the **Xporter** integration and fill in:
 
 ### Step 3 — Initial Bulk Export
 
-Run in the XSOAR 6 playground:
+Run in the XSOAR playground:
 
 ```
 !xsiam-sync-new-incidents max_incidents="100"
@@ -137,7 +140,7 @@ Each run picks up where the last one left off. Run it repeatedly until all incid
 
 ### Step 4 — Ongoing Sync
 
-Create a scheduled job in XSOAR 6 that runs `!xsiam-sync-new-incidents` on an interval (e.g. every 15 minutes). It only sends new incidents each run — no duplicates.
+Create a scheduled job in XSOAR that runs `!xsiam-sync-new-incidents` on an interval (e.g. every 15 minutes). It only sends new incidents each run — no duplicates.
 
 ### Step 5 — Close Status Sync (Optional)
 
