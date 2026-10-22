@@ -1,4 +1,4 @@
-id: b7c9d2e1-4f5a-4b8c-9d3e-c10530000001
+id: Close XSIAM Case From XSOAR
 version: -1
 vcShouldKeepItemLegacyProdMachine: false
 aclrelations: []
@@ -123,3 +123,8 @@ inputs: []
 outputs: []
 adopted: true
 possibleresponses: []
+description: |-
+  Runs on XSIAM when an alert from XSOAR is ingested.
+  Extracts the Close Reason and Close Notes from the XSOAR incident data.
+  If the XSOAR incident was closed, closes the XSIAM case with the same reason and notes.
+fromversion: 6.10.0
