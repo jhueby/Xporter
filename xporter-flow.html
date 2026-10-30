@@ -10,21 +10,24 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     background: #0f1117;
     color: #e1e4ea;
-    padding: 40px 24px;
-    min-height: 100vh;
+    padding: 16px 16px 12px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
   h1 {
     text-align: center;
-    font-size: 28px;
+    font-size: 20px;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 2px;
     color: #f0f2f5;
   }
   .subtitle {
     text-align: center;
-    font-size: 14px;
+    font-size: 11px;
     color: #8b91a0;
-    margin-bottom: 48px;
+    margin-bottom: 14px;
   }
   .diagram {
     max-width: 1100px;
@@ -32,19 +35,19 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    position: relative;
+    flex: 1;
+    width: 100%;
   }
 
   /* Platform headers */
   .platforms {
     display: grid;
-    grid-template-columns: 1fr 120px 1fr;
+    grid-template-columns: 1fr 100px 1fr;
     gap: 0;
-    margin-bottom: 0;
   }
   .platform {
-    padding: 16px 24px;
-    border-radius: 12px 12px 0 0;
+    padding: 8px 16px;
+    border-radius: 10px 10px 0 0;
     text-align: center;
   }
   .platform.xsoar {
@@ -58,14 +61,14 @@
     border-bottom: none;
   }
   .platform h2 {
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 600;
-    margin-bottom: 2px;
+    margin-bottom: 0;
   }
   .platform.xsoar h2 { color: #5b9cf5; }
   .platform.xsiam h2 { color: #a78bfa; }
   .platform .ver {
-    font-size: 11px;
+    font-size: 10px;
     color: #6b7280;
   }
   .arrow-col {
@@ -77,15 +80,14 @@
   /* Flow rows */
   .flow-row {
     display: grid;
-    grid-template-columns: 1fr 120px 1fr;
+    grid-template-columns: 1fr 100px 1fr;
     gap: 0;
-    min-height: 140px;
   }
   .flow-row .left {
     background: #1a2332;
     border-left: 1px solid #2a3a4e;
     border-right: 1px solid #2a3a4e;
-    padding: 20px 20px;
+    padding: 6px 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -94,7 +96,7 @@
     background: #1a1f2e;
     border-left: 1px solid #2e3352;
     border-right: 1px solid #2e3352;
-    padding: 20px 20px;
+    padding: 6px 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -107,17 +109,17 @@
   }
   .flow-row:last-child .left {
     border-bottom: 1px solid #2a3a4e;
-    border-radius: 0 0 0 12px;
+    border-radius: 0 0 0 10px;
   }
   .flow-row:last-child .right {
     border-bottom: 1px solid #2e3352;
-    border-radius: 0 0 12px 0;
+    border-radius: 0 0 10px 0;
   }
 
   /* Flow separator */
   .flow-sep {
     display: grid;
-    grid-template-columns: 1fr 120px 1fr;
+    grid-template-columns: 1fr 100px 1fr;
     gap: 0;
   }
   .flow-sep .left {
@@ -130,7 +132,7 @@
   .flow-sep .left::after {
     content: '';
     position: absolute;
-    left: 20px; right: 20px;
+    left: 12px; right: 12px;
     top: 0;
     height: 1px;
     background: #2a3a4e;
@@ -145,7 +147,7 @@
   .flow-sep .right::after {
     content: '';
     position: absolute;
-    left: 20px; right: 20px;
+    left: 12px; right: 12px;
     top: 0;
     height: 1px;
     background: #2e3352;
@@ -154,40 +156,40 @@
 
   /* Cards */
   .card {
-    border-radius: 10px;
-    padding: 14px 18px;
+    border-radius: 8px;
+    padding: 8px 12px;
     width: 100%;
     max-width: 380px;
   }
   .card h3 {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 600;
-    margin-bottom: 6px;
+    margin-bottom: 3px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
   .card p {
-    font-size: 12px;
+    font-size: 10px;
     color: #8b91a0;
-    line-height: 1.5;
+    line-height: 1.4;
   }
   .card code {
-    font-size: 11px;
+    font-size: 9px;
     background: rgba(0,0,0,0.3);
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 1px 4px;
+    border-radius: 3px;
     color: #9ca3af;
     font-family: 'SF Mono', 'Fira Code', monospace;
   }
   .card .cmd {
-    margin-top: 8px;
+    margin-top: 4px;
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 3px;
   }
   .card .cmd code {
-    font-size: 10px;
+    font-size: 9px;
     color: #7dd3fc;
     background: rgba(125,211,252,0.08);
   }
@@ -235,10 +237,10 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
   }
   .arrow .line {
-    width: 80px;
+    width: 60px;
     height: 2px;
     position: relative;
   }
@@ -246,8 +248,8 @@
     content: '';
     position: absolute;
     right: -1px;
-    top: -5px;
-    border: 6px solid transparent;
+    top: -4px;
+    border: 5px solid transparent;
   }
   .arrow.right .line { background: linear-gradient(90deg, #5b9cf5, #a78bfa); }
   .arrow.right .line::after { border-left-color: #a78bfa; }
@@ -264,14 +266,14 @@
     content: '';
     position: absolute;
     left: -1px;
-    top: -5px;
-    border: 6px solid transparent;
+    top: -4px;
+    border: 5px solid transparent;
     border-right-color: #86d67a;
   }
   .arrow.bidir .line::after { border-left-color: #86d67a; }
 
   .arrow .label {
-    font-size: 9px;
+    font-size: 8px;
     color: #6b7280;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -281,20 +283,20 @@
   /* Flow labels */
   .flow-label {
     display: grid;
-    grid-template-columns: 1fr 120px 1fr;
+    grid-template-columns: 1fr 100px 1fr;
     gap: 0;
   }
   .flow-label .left {
     background: #1a2332;
     border-left: 1px solid #2a3a4e;
     border-right: 1px solid #2a3a4e;
-    padding: 16px 20px 4px;
+    padding: 8px 12px 2px;
   }
   .flow-label .right {
     background: #1a1f2e;
     border-left: 1px solid #2e3352;
     border-right: 1px solid #2e3352;
-    padding: 16px 20px 4px;
+    padding: 8px 12px 2px;
   }
   .flow-label .middle {
     display: flex;
@@ -302,27 +304,26 @@
     justify-content: center;
   }
   .flow-label .tag {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 4px 10px;
-    border-radius: 4px;
+    letter-spacing: 0.8px;
+    padding: 2px 8px;
+    border-radius: 3px;
   }
   .flow-label .tag.f1 { color: #5b9cf5; background: rgba(91,156,245,0.1); }
   .flow-label .tag.f2 { color: #86d67a; background: rgba(134,214,122,0.1); }
   .flow-label .tag.f3 { color: #a78bfa; background: rgba(167,139,250,0.1); }
-  .flow-label .tag.f4 { color: #f0a060; background: rgba(240,160,96,0.1); }
 
   /* Step numbers */
   .step {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 700;
     flex-shrink: 0;
   }
@@ -334,32 +335,23 @@
   /* Legend */
   .legend {
     max-width: 1100px;
-    margin: 32px auto 0;
+    margin: 10px auto 0;
     display: flex;
-    gap: 24px;
+    gap: 20px;
     justify-content: center;
     flex-wrap: wrap;
   }
   .legend-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 12px;
+    gap: 6px;
+    font-size: 10px;
     color: #6b7280;
   }
   .legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
-  }
-
-  /* Trigger note */
-  .trigger-note {
-    font-size: 11px;
-    color: #6b7280;
-    font-style: italic;
-    margin-top: 6px;
-    padding-left: 28px;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
   }
 </style>
 </head>
@@ -394,13 +386,12 @@
     <div class="left">
       <div class="card push">
         <h3><span class="step blue">1</span> Query Incidents</h3>
-        <p>Integration queries the local XSOAR API for incidents matching the configured filter, date range, and max count.</p>
+        <p>Queries the local XSOAR API for incidents matching the configured filter, date range, and max count.</p>
         <div class="cmd">
           <code>push-incidents</code>
           <code>push-incident</code>
           <code>sync-new-incidents</code>
         </div>
-        <p class="trigger-note">Run via playbook, job schedule, or manually in War Room</p>
       </div>
     </div>
     <div class="middle">
@@ -413,7 +404,7 @@
     <div class="right">
       <div class="card result">
         <h3><span class="step purple">2</span> Alerts Created</h3>
-        <p>Each incident becomes a parsed alert via <code>insert_parsed_alerts</code>. Incident metadata (ID, name, status, severity, owner, close reason) is written into the alert description. Severity mapped to title case.</p>
+        <p>Each incident becomes a parsed alert via <code>insert_parsed_alerts</code>. Metadata (ID, name, status, severity, owner) written into the alert description.</p>
         <div class="cmd"><code>Low</code> <code>Medium</code> <code>High</code> <code>Critical</code></div>
       </div>
     </div>
@@ -422,8 +413,8 @@
   <div class="flow-row">
     <div class="left">
       <div class="card warroom">
-        <h3><span class="step orange">3</span> Read War Room Entries</h3>
-        <p>If <strong>Sync War Room entries on push</strong> is enabled, reads all War Room entries from each XSOAR incident. Skips empty entries. Also available standalone via <code>sync-war-room</code> with category filtering.</p>
+        <h3><span class="step orange">3</span> Read War Room</h3>
+        <p>If enabled, reads all War Room entries from each XSOAR incident. Skips empty entries.</p>
         <div class="cmd"><code>sync_war_room: true</code></div>
       </div>
     </div>
@@ -437,9 +428,8 @@
     <div class="right">
       <div class="card warroom" style="border-color: #4a3520;">
         <h3><span class="step orange">4</span> Push to XSIAM Issue</h3>
-        <p>Finds the matching XSIAM alert by XSOAR ID. Checks existing entries for <code>[XSOAR War Room]</code> markers to skip duplicates. Pushes new entries with metadata header (type, category, author, timestamp).</p>
+        <p>Finds matching XSIAM alert by XSOAR ID. Checks for <code>[XSOAR War Room]</code> markers to skip duplicates. Pushes new entries with metadata header.</p>
         <div class="cmd"><code>POST /xsoar/entry</code></div>
-        <p class="trigger-note">War Room lands before close sync can shut the issue</p>
       </div>
     </div>
   </div>
@@ -457,9 +447,8 @@
     <div class="left">
       <div class="card close-poll">
         <h3><span class="step green">1</span> Check Source Status</h3>
-        <p>For each open XSOAR-sourced alert in XSIAM, queries the source XSOAR incident to check if it has been closed since the last push.</p>
+        <p>For each open XSOAR-sourced alert in XSIAM, queries the source incident to check if it has been closed.</p>
         <div class="cmd"><code>sync-close-status</code></div>
-        <p class="trigger-note">Catches incidents closed after they were already pushed</p>
       </div>
     </div>
     <div class="middle">
@@ -471,7 +460,7 @@
     <div class="right">
       <div class="card close-poll" style="border-color: #2d3f1e;">
         <h3><span class="step green">2</span> Alert Resolved</h3>
-        <p>If the XSOAR incident is closed, resolves the matching XSIAM alert with the mapped close reason and notes via <code>update_alert</code>.</p>
+        <p>If the XSOAR incident is closed, resolves the XSIAM alert with the mapped close reason and notes.</p>
         <div class="cmd">
           <code>Resolved</code>
           <code>False Positive</code>
@@ -495,21 +484,19 @@
     <div class="left">
       <div class="card empty">
         <h3>No action on XSOAR</h3>
-        <p>This flow runs entirely on the XSIAM side when an already-closed incident arrives as a new alert.</p>
+        <p>This flow runs entirely on XSIAM when an already-closed incident arrives as a new alert.</p>
       </div>
     </div>
     <div class="middle">
       <div class="arrow right" style="opacity: 0.3;">
-        <span class="label">Alert arrives</span>
+        <span class="label">Already closed</span>
         <div class="line"></div>
-        <span class="label">already closed</span>
       </div>
     </div>
     <div class="right">
       <div class="card close-rt">
-        <h3><span class="step purple">T</span> Trigger Playbook Fires</h3>
-        <p><strong>Close XSIAM Case From XSOAR</strong> playbook triggers on ingestion. The <code>CloseFromXSOAR</code> script parses the alert description for Status, Close Reason, and Close Notes. If status is Done/Archive, auto-closes the XSIAM case.</p>
-        <p class="trigger-note">Handles incidents that were already closed at push time</p>
+        <h3><span class="step purple">T</span> Trigger Playbook</h3>
+        <p><strong>Close XSIAM Case From XSOAR</strong> fires on ingestion. <code>CloseFromXSOAR</code> parses the alert description for Status and Close Reason. If closed, auto-resolves the case.</p>
       </div>
     </div>
   </div>
@@ -524,7 +511,7 @@
   </div>
   <div class="legend-item">
     <div class="legend-dot" style="background: #f0a060;"></div>
-    War Room Sync (baked into push)
+    War Room Sync
   </div>
   <div class="legend-item">
     <div class="legend-dot" style="background: #86d67a;"></div>

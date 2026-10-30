@@ -370,17 +370,33 @@ def push_incidents_command(
     )]
 
     war_room_total = 0
+    war_room_issues: list[dict] = []
     if sync_war_room:
         for inc in incidents:
-            wr = sync_war_room_for_incident(xsiam_client, xsoar_client, str(inc.get("id", "")))
+            inc_id = str(inc.get("id", ""))
+            wr = sync_war_room_for_incident(xsiam_client, xsoar_client, inc_id)
             war_room_total += wr["synced"]
+            if wr["status"] != "ok" or wr["errors"]:
+                war_room_issues.append({
+                    "IncidentID": inc_id,
+                    "Status": wr["status"],
+                    "Synced": wr["synced"],
+                    "Errors": wr["errors"],
+                })
         if war_room_total:
             parts.append(f"\nSynced {war_room_total} War Room entries across {len(incidents)} incident(s).")
+        if war_room_issues:
+            parts.append(tableToMarkdown(
+                "Incidents with incomplete War Room sync",
+                war_room_issues,
+                headers=["IncidentID", "Status", "Synced", "Errors"],
+            ))
 
     return CommandResults(
         readable_output="\n".join(parts),
         outputs_prefix="XSOARExporter.Push",
-        outputs={"PushedCount": len(alerts), "Incidents": pushed_summary, "WarRoomSynced": war_room_total},
+        outputs={"PushedCount": len(alerts), "Incidents": pushed_summary, "WarRoomSynced": war_room_total,
+                 "WarRoomIssues": war_room_issues},
     )
 
 
@@ -417,15 +433,25 @@ def push_single_incident_command(
     )]
 
     war_room_synced = 0
+    war_room_status = "ok"
+    war_room_errors = 0
     if sync_war_room:
         wr = sync_war_room_for_incident(xsiam_client, xsoar_client, str(incident_id))
         war_room_synced = wr["synced"]
+        war_room_status = wr["status"]
+        war_room_errors = wr["errors"]
         if war_room_synced:
             parts.append(f"\nSynced {war_room_synced} War Room entries.")
-        elif wr["status"] == "alert_not_found":
-            parts.append("\nWar Room sync skipped: alert not yet available in XSIAM (ingestion delay).")
+        if war_room_status == "alert_not_found":
+            parts.append("\nWar Room sync incomplete: alert not yet available in XSIAM (ingestion delay).")
+        elif war_room_status == "war_room_read_failed":
+            parts.append("\nWar Room sync incomplete: failed to read War Room entries from XSOAR.")
+        if war_room_errors:
+            parts.append(f"\nWar Room sync incomplete: {war_room_errors} entries failed to push.")
 
     pushed_info["WarRoomSynced"] = war_room_synced
+    pushed_info["WarRoomStatus"] = war_room_status
+    pushed_info["WarRoomErrors"] = war_room_errors
     return CommandResults(
         readable_output="\n".join(parts),
         outputs_prefix="XSOARExporter.Push",
@@ -486,17 +512,33 @@ def sync_new_incidents_command(
     )]
 
     war_room_total = 0
+    war_room_issues: list[dict] = []
     if sync_war_room:
         for inc in new_incidents:
-            wr = sync_war_room_for_incident(xsiam_client, xsoar_client, str(inc.get("id", "")))
+            inc_id = str(inc.get("id", ""))
+            wr = sync_war_room_for_incident(xsiam_client, xsoar_client, inc_id)
             war_room_total += wr["synced"]
+            if wr["status"] != "ok" or wr["errors"]:
+                war_room_issues.append({
+                    "IncidentID": inc_id,
+                    "Status": wr["status"],
+                    "Synced": wr["synced"],
+                    "Errors": wr["errors"],
+                })
         if war_room_total:
             parts.append(f"\nSynced {war_room_total} War Room entries across {len(new_incidents)} incident(s).")
+        if war_room_issues:
+            parts.append(tableToMarkdown(
+                "Incidents with incomplete War Room sync",
+                war_room_issues,
+                headers=["IncidentID", "Status", "Synced", "Errors"],
+            ))
 
     return CommandResults(
         readable_output="\n".join(parts),
         outputs_prefix="XSOARExporter.Sync",
-        outputs={"SyncedCount": len(new_incidents), "Incidents": pushed_summary, "LastSyncedID": new_last_id, "WarRoomSynced": war_room_total},
+        outputs={"SyncedCount": len(new_incidents), "Incidents": pushed_summary, "LastSyncedID": new_last_id,
+                 "WarRoomSynced": war_room_total, "WarRoomIssues": war_room_issues},
     )
 
 
@@ -623,20 +665,23 @@ def sync_close_status_command(xsiam_client: XSIAMClient, args: dict) -> CommandR
 def sync_war_room_for_incident(
     xsiam_client: XSIAMClient, xsoar_client: XSOARClient, incident_id: str
 ) -> dict:
-    result = {"incident_id": incident_id, "synced": 0, "skipped": 0, "errors": 0, "status": "ok"}
+    result = {"incident_id": incident_id, "synced": 0, "skipped": 0, "errors": 0, "error_details": [], "status": "ok"}
 
     try:
         alert = xsiam_client.find_alert_by_xsoar_id(incident_id)
-    except Exception:
+    except Exception as e:
+        demisto.debug(f"War Room sync: failed to find XSIAM alert for incident {incident_id}: {e}")
         alert = None
     if not alert:
+        demisto.info(f"War Room sync incomplete for incident {incident_id}: XSIAM alert not found (ingestion delay)")
         result["status"] = "alert_not_found"
         return result
 
     xsiam_alert_id = alert.get("external_id", "")
     try:
         entries = xsoar_client.get_war_room_entries(incident_id)
-    except Exception:
+    except Exception as e:
+        demisto.info(f"War Room sync incomplete for incident {incident_id}: failed to read War Room entries: {e}")
         result["status"] = "war_room_read_failed"
         return result
 
@@ -667,9 +712,16 @@ def sync_war_room_for_incident(
         try:
             xsiam_client.insert_war_room_entry(xsiam_alert_id, formatted)
             result["synced"] += 1
-        except Exception:
+        except Exception as e:
             result["errors"] += 1
+            result["error_details"].append({"entry_id": entry_id, "error": str(e)})
+            demisto.debug(f"War Room sync: failed to push entry {entry_id} for incident {incident_id}: {e}")
 
+    if result["errors"]:
+        demisto.info(
+            f"War Room sync incomplete for incident {incident_id}: "
+            f"{result['synced']} synced, {result['errors']} failed, {result['skipped']} skipped"
+        )
     return result
 
 
