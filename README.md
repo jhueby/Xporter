@@ -1,89 +1,98 @@
-# xporter — XSOAR to XSIAM Incident Exporter
+# Xporter
 
-Content pack for exporting Cortex XSOAR 6 or XSOAR 8 incidents into Cortex XSIAM. Includes two integrations covering both push and pull workflows.
+Content pack for exporting Cortex XSOAR 6 or XSOAR 8 incidents into Cortex XSIAM as parsed alerts, with War Room sync and bidirectional close status propagation.
 
-## Integrations
+## How It Works
 
-### 1. XSIAM Alert Pusher (Push — runs on XSOAR 6 or 8)
+```mermaid
+flowchart LR
+    subgraph XSOAR["Cortex XSOAR (6 or 8)"]
+        A["Query Incidents"]
+        W["Read War Room"]
+        C["Check Close Status"]
+    end
 
-Pushes XSOAR incidents to XSIAM as parsed alerts via the [Insert Parsed Alerts API](https://docs-cortex.paloaltonetworks.com/r/Cortex-XSIAM/Cortex-XSIAM-API-Reference/Insert-Parsed-Alerts). Compatible with both XSOAR 6 (on-prem) and XSOAR 8 (cloud).
+    subgraph XSIAM["Cortex XSIAM"]
+        B["Alerts / Issues Created"]
+        WR["War Room Entries Synced"]
+        R["Alert Resolved"]
+        T["Trigger Playbook\nCloseFromXSOAR"]
+    end
 
-**How it works:**
-- Queries XSOAR for incidents matching a configurable filter
-- Maps each incident to the XSIAM parsed alert schema with full incident context (custom fields, labels, close status, raw JSON)
-- Event timestamp maps to the original XSOAR occurred/created time (adjustable via timestamp offset)
-- Posts the alerts to XSIAM where they are ingested and grouped into incidents automatically
-- Tracks sync state for incremental pushes — only sends new incidents each run
+    A -- "insert_parsed_alerts" --> B
+    B -. "if sync_war_room enabled" .-> W
+    W -- "POST /xsoar/entry\n(with dedup)" --> WR
+    C -- "query + resolve" --> R
+    B -. "already-closed\nalert arrives" .-> T
+```
 
-**Commands:**
+### Flow 1: Incident Push + War Room Sync
+
+1. Integration queries the local XSOAR API for incidents matching a configurable filter
+2. Maps each incident to the XSIAM parsed alert schema with full context (ID, name, status, severity, owner, close reason)
+3. Posts alerts to XSIAM via the Insert Parsed Alerts API
+4. If **Sync War Room entries on push** is enabled, reads War Room entries from each incident and pushes them to the matching XSIAM issue with deduplication
+
+War Room entries land before close sync can shut the issue.
+
+### Flow 2: Close Sync (Polling)
+
+Runs from XSOAR via `sync-close-status`. Queries XSIAM for open XSOAR-sourced alerts, checks if the source XSOAR incident has been closed, and resolves the alert with the mapped close reason. Catches incidents closed after they were already pushed.
+
+### Flow 3: Close Sync (Real-time)
+
+Runs entirely on XSIAM. When an already-closed incident arrives as a new alert, the **Close XSIAM Case From XSOAR** trigger playbook fires. The `CloseFromXSOAR` script parses the alert description and auto-closes the XSIAM case.
+
+## Commands
+
 | Command | Description |
 |---|---|
-| `!xsiam-push-incidents` | Bulk push incidents matching a query |
-| `!xsiam-push-incident` | Push a single incident by ID |
-| `!xsiam-sync-new-incidents` | Find and push only new incidents not yet synced |
-| `!xsiam-reset-sync` | Reset sync state so next sync sends all incidents |
+| `!xsoar-exporter-push-incidents` | Bulk push incidents matching a query |
+| `!xsoar-exporter-push-incident` | Push a single incident by ID |
+| `!xsoar-exporter-sync-new-incidents` | Find and push only new incidents not yet synced |
+| `!xsoar-exporter-reset-sync` | Reset sync state so next sync sends all incidents |
+| `!xsoar-exporter-sync-close-status` | Resolve XSIAM alerts whose XSOAR incidents are closed |
+| `!xsoar-exporter-sync-war-room` | Sync War Room entries for a specific incident (standalone) |
 
-**Configuration:**
+## Configuration
+
 | Parameter | Description |
 |---|---|
-| XSOAR Server URL | URL of the XSOAR instance. XSOAR 6: `https://192.168.1.215/`. XSOAR 8: `https://api-{tenant}.xdr.us.paloaltonetworks.com` |
-| XSOAR API Key | XSOAR API key for authentication |
-| XSOAR API Key ID | XSOAR 8 only — the numeric API Key ID. Leave blank for XSOAR 6 |
-| XSIAM API URL | Your XSIAM tenant API URL |
-| XSIAM API Key | API key for authentication |
-| XSIAM API Key ID | Key ID associated with the API key |
-| Incident query filter | Optional XSOAR query to filter incidents |
+| Cortex XSOAR Server URL | XSOAR 6: `https://{ip}`. XSOAR 8: `https://api-{tenant}.xdr.us.paloaltonetworks.com` |
+| Cortex XSOAR API Key | API key for XSOAR authentication |
+| Cortex XSOAR API Key ID | XSOAR 8 only. Leave blank for XSOAR 6 |
+| Cortex XSIAM API URL | `https://api-{tenant}.xdr.us.paloaltonetworks.com` |
+| Cortex XSIAM API Key | API key for XSIAM authentication |
+| Cortex XSIAM API Key ID | Key ID associated with the XSIAM API key |
+| Incident query filter | Optional XSOAR query to filter incidents (e.g., `type:Phishing`) |
 | Maximum incidents per push | Batch size limit (default: 100) |
-| Elevate Low severity to Medium | Map Low severity to Medium so alerts create cases instead of issues only. Only Medium or higher severity alerts will automatically trigger playbooks |
-| Timestamp offset (minutes) | Minutes to add to the original XSOAR timestamp. The event timestamp defaults to the XSOAR occurred/created time. Use a positive offset to shift old incidents forward. XSIAM silently drops alerts with timestamps too far in the past |
+| Elevate Low severity to Medium | Map Low to Medium so alerts create cases and trigger playbooks |
+| Timestamp offset (minutes) | Shift old XSOAR timestamps forward so XSIAM doesn't drop them |
+| Sync War Room entries on push | Automatically sync War Room entries when pushing incidents |
 
-### 2. XSOAR Incident Collector (Pull — runs on XSIAM)
+## Setup
 
-Runs on XSIAM and fetches incidents from a remote XSOAR 6 or XSOAR 8 instance via the XSOAR REST API.
+### 1. Install and Configure
 
-**How it works:**
-- Connects to the XSOAR `/incidents/search` endpoint on a schedule (auto-detects XSOAR 6 vs 8 API paths)
-- Fetches incidents created since the last successful run
-- Maps them to XSIAM incidents with original XSOAR metadata preserved in custom fields
-- Handles deduplication across fetch cycles
+Upload the pack to your Cortex XSOAR instance. Create an integration instance with your XSOAR and XSIAM credentials. Hit **Test** to verify connectivity.
 
-**Commands:**
-| Command | Description |
-|---|---|
-| `!xsoar6-get-incidents` | Search incidents on the remote XSOAR instance |
-| `!xsoar6-get-incident` | Get a specific incident by ID |
+### 2. Initial Bulk Export
 
-**Configuration:**
-| Parameter | Description |
-|---|---|
-| XSOAR Server URL | URL of the XSOAR instance. XSOAR 6: `https://{server-ip}`. XSOAR 8: `https://api-{tenant}.xdr.us.paloaltonetworks.com` |
-| XSOAR API Key | API key for authentication |
-| XSOAR API Key ID | XSOAR 8 only — the numeric API Key ID. Leave blank for XSOAR 6 |
-| First fetch time | How far back to look on first run (default: 3 days) |
-| Maximum incidents per fetch | Batch size limit (default: 50) |
-| Incident query filter | Optional XSOAR query to filter incidents |
-| Incident type | XSIAM incident type to assign |
+```
+!xsoar-exporter-sync-new-incidents max_incidents="100"
+```
 
-## Which integration should I use?
+Each run picks up where the last one left off. Run repeatedly until all incidents are synced. To start over: `!xsoar-exporter-reset-sync`.
 
-| Scenario | Recommended Integration |
-|---|---|
-| XSOAR can reach XSIAM (outbound HTTPS) | **XSIAM Alert Pusher** (push) |
-| XSIAM can reach XSOAR (inbound HTTPS or Broker VM) | **XSOAR Incident Collector** (pull) |
-| Want incidents as XSIAM alerts with auto-grouping | **XSIAM Alert Pusher** (push) |
-| Want incidents directly as XSIAM incidents | **XSOAR Incident Collector** (pull) |
-| Need on-demand / manual export | **XSIAM Alert Pusher** (push) |
-| Need continuous automatic sync | Either — both support scheduled operation |
+### 3. Ongoing Sync
 
-### 3. Automation Scripts (run on XSIAM)
+Create a scheduled job in XSOAR that runs `!xsoar-exporter-sync-new-incidents` on an interval (e.g., every 15 minutes). Only new incidents are sent each run.
 
-**CloseFromXSOAR** — Playbook task that extracts Close Reason and Close Notes from a pushed XSOAR alert and closes the XSIAM case if the XSOAR incident was closed.
+### 4. Close Status Sync
 
-**SyncXSOARCloseStatus** — Scheduled job script that queries XSIAM for open XSOAR-sourced alerts, checks each alert's description for close status, and resolves alerts whose XSOAR incidents are closed. Maps XSOAR close reasons to XSIAM resolution statuses (Resolved, False Positive, Duplicate, Other).
+Run `!xsoar-exporter-sync-close-status` on a schedule to resolve XSIAM alerts whose source XSOAR incidents have closed.
 
-### 4. Playbook
-
-**Close XSIAM Case From XSOAR** — Attach to XSIAM cases with source "Palo Alto Networks - XSOAR". Runs CloseFromXSOAR to auto-close cases when the XSOAR incident was closed.
+For real-time close sync, configure the **Close XSIAM Case From XSOAR** playbook as a trigger playbook in XSIAM (Settings > Automation & Feed > Trigger Playbooks).
 
 ## Pack Structure
 
@@ -91,60 +100,18 @@ Runs on XSIAM and fetches incidents from a remote XSOAR 6 or XSOAR 8 instance vi
 Packs/XSOARIncidentExporter/
 ├── pack_metadata.json
 ├── Integrations/
-│   ├── XSIAMAlertPusher/
-│   │   ├── XSIAMAlertPusher.py
-│   │   ├── XSIAMAlertPusher.yml
-│   │   └── XSIAMAlertPusher_description.md
-│   └── XSOAR6Collector/
-│       ├── XSOAR6Collector.py
-│       ├── XSOAR6Collector.yml
-│       └── XSOAR6Collector_description.md
+│   └── XSOARIncidentExporter/
+│       ├── XSOARIncidentExporter.py
+│       ├── XSOARIncidentExporter.yml
+│       ├── XSOARIncidentExporter_test.py
+│       └── command_examples.txt
 ├── Scripts/
-│   ├── CloseFromXSOAR/
-│   │   ├── CloseFromXSOAR.py
-│   │   └── CloseFromXSOAR.yml
-│   └── SyncXSOARCloseStatus/
-│       ├── SyncXSOARCloseStatus.py
-│       └── SyncXSOARCloseStatus.yml
+│   └── CloseFromXSOAR/
+│       ├── CloseFromXSOAR.py
+│       └── CloseFromXSOAR.yml
 └── Playbooks/
     └── Close_XSIAM_Case_From_XSOAR.yml
 ```
-
-## Exporting All XSOAR Incidents to XSIAM
-
-### Step 1 — Install the Integration
-
-Upload the unified `Xporter.yml` file to your XSOAR instance via **Settings → Integrations → Upload Integration**.
-
-### Step 2 — Configure the Instance
-
-Create a new instance of the **Xporter** integration and fill in:
-
-- **XSOAR Server URL** — XSOAR 6: `https://192.168.1.215/`. XSOAR 8: `https://api-{tenant}.xdr.us.paloaltonetworks.com`
-- **XSOAR API Key**
-- **XSOAR API Key ID** — XSOAR 8 only. Leave blank for XSOAR 6
-- **XSIAM API URL** — e.g. `https://api-{tenant}.xdr.us.paloaltonetworks.com`
-- **XSIAM API Key** and **XSIAM API Key ID**
-- **Elevate Low severity to Medium** — check this if you want all incidents to create cases and trigger playbooks in XSIAM. Only Medium or higher severity alerts automatically trigger playbooks.
-- **Timestamp offset (minutes)** — the event timestamp defaults to the original XSOAR occurred/created time. If your incidents are old, set a positive offset to shift them forward so XSIAM doesn't silently drop them.
-
-### Step 3 — Initial Bulk Export
-
-Run in the XSOAR playground:
-
-```
-!xsiam-sync-new-incidents max_incidents="100"
-```
-
-Each run picks up where the last one left off. Run it repeatedly until all incidents are synced. To start over, run `!xsiam-reset-sync`.
-
-### Step 4 — Ongoing Sync
-
-Create a scheduled job in XSOAR that runs `!xsiam-sync-new-incidents` on an interval (e.g. every 15 minutes). It only sends new incidents each run — no duplicates.
-
-### Step 5 — Close Status Sync (Optional)
-
-Upload the `SyncXSOARCloseStatus` script to XSIAM and set it up as a scheduled job. It queries XSIAM for open XSOAR-sourced alerts, checks each alert's description for close status, and resolves them with the matching close reason and notes.
 
 ## License
 
