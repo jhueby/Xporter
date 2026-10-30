@@ -23,10 +23,10 @@ SEVERITY_MAP = {
 }
 
 XSIAM_RESOLUTION_MAP = {
-    "resolved": "STATUS_030_RESOLVED_THREAT_HANDLED",
-    "false positive": "STATUS_060_RESOLVED_FALSE_POSITIVE",
-    "duplicate": "STATUS_050_RESOLVED_DUPLICATE",
-    "other": "STATUS_080_RESOLVED_OTHER",
+    "resolved": "resolved_true_positive",
+    "false positive": "resolved_false_positive",
+    "duplicate": "resolved_duplicate_alert",
+    "other": "resolved_other",
 }
 
 
@@ -146,12 +146,14 @@ class XSIAMClient(BaseClient):
             json_data=body,
         )
 
-    def update_alerts(self, alert_ids: list, resolution_status: str, comment: str) -> dict:
+    def update_alerts(self, alert_ids: list, resolution_status: str, comment: str = "") -> dict:
+        update_data: dict[str, str] = {"status": resolution_status}
+        if comment:
+            update_data["comment"] = comment
         body = {
             "request_data": {
                 "alert_id_list": alert_ids,
-                "resolution_status": resolution_status,
-                "resolution_comment": comment,
+                "update_data": update_data,
             }
         }
         return self._http_request(
@@ -575,8 +577,8 @@ def extract_alert_field(description: str, field_name: str) -> str:
 
 def map_xsiam_resolution(xsoar_reason: str) -> str:
     if not xsoar_reason:
-        return "STATUS_080_RESOLVED_OTHER"
-    return XSIAM_RESOLUTION_MAP.get(xsoar_reason.lower(), "STATUS_080_RESOLVED_OTHER")
+        return "resolved_other"
+    return XSIAM_RESOLUTION_MAP.get(xsoar_reason.lower(), "resolved_other")
 
 
 def sync_close_status_command(xsiam_client: XSIAMClient, args: dict) -> CommandResults:
