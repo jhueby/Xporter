@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xporter Integration Flow</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #0f1117;
+    color: #e1e4ea;
+    padding: 40px 24px;
+    min-height: 100vh;
+  }
+  h1 {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #f0f2f5;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 14px;
+    color: #8b91a0;
+    margin-bottom: 48px;
+  }
+  .diagram {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+
+  /* Platform headers */
+  .platforms {
+    display: grid;
+    grid-template-columns: 1fr 120px 1fr;
+    gap: 0;
+    margin-bottom: 0;
+  }
+  .platform {
+    padding: 16px 24px;
+    border-radius: 12px 12px 0 0;
+    text-align: center;
+  }
+  .platform.xsoar {
+    background: #1a2332;
+    border: 1px solid #2a3a4e;
+    border-bottom: none;
+  }
+  .platform.xsiam {
+    background: #1a1f2e;
+    border: 1px solid #2e3352;
+    border-bottom: none;
+  }
+  .platform h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .platform.xsoar h2 { color: #5b9cf5; }
+  .platform.xsiam h2 { color: #a78bfa; }
+  .platform .ver {
+    font-size: 11px;
+    color: #6b7280;
+  }
+  .arrow-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Flow rows */
+  .flow-row {
+    display: grid;
+    grid-template-columns: 1fr 120px 1fr;
+    gap: 0;
+    min-height: 140px;
+  }
+  .flow-row .left {
+    background: #1a2332;
+    border-left: 1px solid #2a3a4e;
+    border-right: 1px solid #2a3a4e;
+    padding: 20px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .flow-row .right {
+    background: #1a1f2e;
+    border-left: 1px solid #2e3352;
+    border-right: 1px solid #2e3352;
+    padding: 20px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .flow-row .middle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .flow-row:last-child .left {
+    border-bottom: 1px solid #2a3a4e;
+    border-radius: 0 0 0 12px;
+  }
+  .flow-row:last-child .right {
+    border-bottom: 1px solid #2e3352;
+    border-radius: 0 0 12px 0;
+  }
+
+  /* Flow separator */
+  .flow-sep {
+    display: grid;
+    grid-template-columns: 1fr 120px 1fr;
+    gap: 0;
+  }
+  .flow-sep .left {
+    background: #1a2332;
+    border-left: 1px solid #2a3a4e;
+    border-right: 1px solid #2a3a4e;
+    height: 1px;
+    position: relative;
+  }
+  .flow-sep .left::after {
+    content: '';
+    position: absolute;
+    left: 20px; right: 20px;
+    top: 0;
+    height: 1px;
+    background: #2a3a4e;
+  }
+  .flow-sep .right {
+    background: #1a1f2e;
+    border-left: 1px solid #2e3352;
+    border-right: 1px solid #2e3352;
+    height: 1px;
+    position: relative;
+  }
+  .flow-sep .right::after {
+    content: '';
+    position: absolute;
+    left: 20px; right: 20px;
+    top: 0;
+    height: 1px;
+    background: #2e3352;
+  }
+  .flow-sep .middle { height: 1px; }
+
+  /* Cards */
+  .card {
+    border-radius: 10px;
+    padding: 14px 18px;
+    width: 100%;
+    max-width: 380px;
+  }
+  .card h3 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card p {
+    font-size: 12px;
+    color: #8b91a0;
+    line-height: 1.5;
+  }
+  .card code {
+    font-size: 11px;
+    background: rgba(0,0,0,0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #9ca3af;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  .card .cmd {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .card .cmd code {
+    font-size: 10px;
+    color: #7dd3fc;
+    background: rgba(125,211,252,0.08);
+  }
+
+  /* Card themes */
+  .card.push {
+    background: #162030;
+    border: 1px solid #1e3a5f;
+  }
+  .card.push h3 { color: #5b9cf5; }
+
+  .card.close-poll {
+    background: #1a2215;
+    border: 1px solid #2d3f1e;
+  }
+  .card.close-poll h3 { color: #86d67a; }
+
+  .card.close-rt {
+    background: #1f1a2e;
+    border: 1px solid #352e5a;
+  }
+  .card.close-rt h3 { color: #a78bfa; }
+
+  .card.warroom {
+    background: #2a1f15;
+    border: 1px solid #4a3520;
+  }
+  .card.warroom h3 { color: #f0a060; }
+
+  .card.result {
+    background: #1a1f2e;
+    border: 1px solid #2e3352;
+  }
+  .card.result h3 { color: #a78bfa; }
+
+  .card.empty {
+    background: transparent;
+    border: 1px dashed #333;
+    opacity: 0.4;
+  }
+  .card.empty h3 { color: #6b7280; }
+
+  /* Arrows */
+  .arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .arrow .line {
+    width: 80px;
+    height: 2px;
+    position: relative;
+  }
+  .arrow .line::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: -5px;
+    border: 6px solid transparent;
+  }
+  .arrow.right .line { background: linear-gradient(90deg, #5b9cf5, #a78bfa); }
+  .arrow.right .line::after { border-left-color: #a78bfa; }
+
+  .arrow.left .line { background: linear-gradient(90deg, #a78bfa, #5b9cf5); }
+  .arrow.left .line::after {
+    left: -1px; right: auto;
+    border-right-color: #5b9cf5;
+    border-left-color: transparent;
+  }
+
+  .arrow.bidir .line { background: linear-gradient(90deg, #86d67a, #86d67a); }
+  .arrow.bidir .line::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: -5px;
+    border: 6px solid transparent;
+    border-right-color: #86d67a;
+  }
+  .arrow.bidir .line::after { border-left-color: #86d67a; }
+
+  .arrow .label {
+    font-size: 9px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  /* Flow labels */
+  .flow-label {
+    display: grid;
+    grid-template-columns: 1fr 120px 1fr;
+    gap: 0;
+  }
+  .flow-label .left {
+    background: #1a2332;
+    border-left: 1px solid #2a3a4e;
+    border-right: 1px solid #2a3a4e;
+    padding: 16px 20px 4px;
+  }
+  .flow-label .right {
+    background: #1a1f2e;
+    border-left: 1px solid #2e3352;
+    border-right: 1px solid #2e3352;
+    padding: 16px 20px 4px;
+  }
+  .flow-label .middle {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .flow-label .tag {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+  .flow-label .tag.f1 { color: #5b9cf5; background: rgba(91,156,245,0.1); }
+  .flow-label .tag.f2 { color: #86d67a; background: rgba(134,214,122,0.1); }
+  .flow-label .tag.f3 { color: #a78bfa; background: rgba(167,139,250,0.1); }
+  .flow-label .tag.f4 { color: #f0a060; background: rgba(240,160,96,0.1); }
+
+  /* Step numbers */
+  .step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step.blue { background: rgba(91,156,245,0.2); color: #5b9cf5; }
+  .step.green { background: rgba(134,214,122,0.2); color: #86d67a; }
+  .step.purple { background: rgba(167,139,250,0.2); color: #a78bfa; }
+  .step.orange { background: rgba(240,160,96,0.2); color: #f0a060; }
+
+  /* Legend */
+  .legend {
+    max-width: 1100px;
+    margin: 32px auto 0;
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #6b7280;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+
+  /* Trigger note */
+  .trigger-note {
+    font-size: 11px;
+    color: #6b7280;
+    font-style: italic;
+    margin-top: 6px;
+    padding-left: 28px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Xporter: XSOAR Incident Exporter</h1>
+<p class="subtitle">Integration data flow across Cortex XSOAR and Cortex XSIAM</p>
+
+<div class="diagram">
+
+  <!-- Platform headers -->
+  <div class="platforms">
+    <div class="platform xsoar">
+      <h2>Cortex XSOAR</h2>
+      <span class="ver">XSOAR 6 or XSOAR 8</span>
+    </div>
+    <div class="arrow-col"></div>
+    <div class="platform xsiam">
+      <h2>Cortex XSIAM</h2>
+      <span class="ver">Alerts, Issues &amp; Cases</span>
+    </div>
+  </div>
+
+  <!-- FLOW 1: Incident Push + War Room -->
+  <div class="flow-label">
+    <div class="left"><span class="tag f1">Flow 1: Incident Push + War Room Sync</span></div>
+    <div class="middle"></div>
+    <div class="right"></div>
+  </div>
+
+  <div class="flow-row">
+    <div class="left">
+      <div class="card push">
+        <h3><span class="step blue">1</span> Query Incidents</h3>
+        <p>Integration queries the local XSOAR API for incidents matching the configured filter, date range, and max count.</p>
+        <div class="cmd">
+          <code>push-incidents</code>
+          <code>push-incident</code>
+          <code>sync-new-incidents</code>
+        </div>
+        <p class="trigger-note">Run via playbook, job schedule, or manually in War Room</p>
+      </div>
+    </div>
+    <div class="middle">
+      <div class="arrow right">
+        <span class="label">Parsed Alerts</span>
+        <div class="line"></div>
+        <span class="label">API</span>
+      </div>
+    </div>
+    <div class="right">
+      <div class="card result">
+        <h3><span class="step purple">2</span> Alerts Created</h3>
+        <p>Each incident becomes a parsed alert via <code>insert_parsed_alerts</code>. Incident metadata (ID, name, status, severity, owner, close reason) is written into the alert description. Severity mapped to title case.</p>
+        <div class="cmd"><code>Low</code> <code>Medium</code> <code>High</code> <code>Critical</code></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-row">
+    <div class="left">
+      <div class="card warroom">
+        <h3><span class="step orange">3</span> Read War Room Entries</h3>
+        <p>If <strong>Sync War Room entries on push</strong> is enabled, reads all War Room entries from each XSOAR incident. Skips empty entries. Also available standalone via <code>sync-war-room</code> with category filtering.</p>
+        <div class="cmd"><code>sync_war_room: true</code></div>
+      </div>
+    </div>
+    <div class="middle">
+      <div class="arrow right">
+        <span class="label">Entries</span>
+        <div class="line" style="background: linear-gradient(90deg, #f0a060, #a78bfa);"></div>
+        <span class="label">with dedup</span>
+      </div>
+    </div>
+    <div class="right">
+      <div class="card warroom" style="border-color: #4a3520;">
+        <h3><span class="step orange">4</span> Push to XSIAM Issue</h3>
+        <p>Finds the matching XSIAM alert by XSOAR ID. Checks existing entries for <code>[XSOAR War Room]</code> markers to skip duplicates. Pushes new entries with metadata header (type, category, author, timestamp).</p>
+        <div class="cmd"><code>POST /xsoar/entry</code></div>
+        <p class="trigger-note">War Room lands before close sync can shut the issue</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-sep"><div class="left"></div><div class="middle"></div><div class="right"></div></div>
+
+  <!-- FLOW 2: Close Sync (Polling) -->
+  <div class="flow-label">
+    <div class="left"><span class="tag f2">Flow 2: Close Sync (Polling)</span></div>
+    <div class="middle"></div>
+    <div class="right"></div>
+  </div>
+
+  <div class="flow-row">
+    <div class="left">
+      <div class="card close-poll">
+        <h3><span class="step green">1</span> Check Source Status</h3>
+        <p>For each open XSOAR-sourced alert in XSIAM, queries the source XSOAR incident to check if it has been closed since the last push.</p>
+        <div class="cmd"><code>sync-close-status</code></div>
+        <p class="trigger-note">Catches incidents closed after they were already pushed</p>
+      </div>
+    </div>
+    <div class="middle">
+      <div class="arrow bidir">
+        <span class="label">Query + Resolve</span>
+        <div class="line"></div>
+      </div>
+    </div>
+    <div class="right">
+      <div class="card close-poll" style="border-color: #2d3f1e;">
+        <h3><span class="step green">2</span> Alert Resolved</h3>
+        <p>If the XSOAR incident is closed, resolves the matching XSIAM alert with the mapped close reason and notes via <code>update_alert</code>.</p>
+        <div class="cmd">
+          <code>Resolved</code>
+          <code>False Positive</code>
+          <code>Duplicate</code>
+          <code>Other</code>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-sep"><div class="left"></div><div class="middle"></div><div class="right"></div></div>
+
+  <!-- FLOW 3: Close Sync (Real-time) -->
+  <div class="flow-label">
+    <div class="left"></div>
+    <div class="middle"></div>
+    <div class="right"><span class="tag f3">Flow 3: Close Sync (Real-time)</span></div>
+  </div>
+
+  <div class="flow-row">
+    <div class="left">
+      <div class="card empty">
+        <h3>No action on XSOAR</h3>
+        <p>This flow runs entirely on the XSIAM side when an already-closed incident arrives as a new alert.</p>
+      </div>
+    </div>
+    <div class="middle">
+      <div class="arrow right" style="opacity: 0.3;">
+        <span class="label">Alert arrives</span>
+        <div class="line"></div>
+        <span class="label">already closed</span>
+      </div>
+    </div>
+    <div class="right">
+      <div class="card close-rt">
+        <h3><span class="step purple">T</span> Trigger Playbook Fires</h3>
+        <p><strong>Close XSIAM Case From XSOAR</strong> playbook triggers on ingestion. The <code>CloseFromXSOAR</code> script parses the alert description for Status, Close Reason, and Close Notes. If status is Done/Archive, auto-closes the XSIAM case.</p>
+        <p class="trigger-note">Handles incidents that were already closed at push time</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-dot" style="background: #5b9cf5;"></div>
+    Incident Push
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background: #f0a060;"></div>
+    War Room Sync (baked into push)
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background: #86d67a;"></div>
+    Close Sync (Polling)
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background: #a78bfa;"></div>
+    Close Sync (Real-time)
+  </div>
+</div>
+
+</body>
+</html>
