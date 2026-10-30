@@ -122,6 +122,10 @@ Incomplete syncs (e.g., XSIAM alert not yet ingested, entry push failures) are l
 
 With **Elevate Low severity to Medium** enabled, Low severity incidents become Medium and create cases instead of issues.
 
+## Rate Limit Handling
+
+All XSIAM API calls automatically retry on HTTP 429 (rate limited) responses. The integration uses exponential backoff starting at 1 second, doubling each attempt up to 60 seconds, for a maximum of 5 retries. If the response includes a `Retry-After` header, that value is used instead. Each retry is logged in the integration logs.
+
 ## Pack Structure
 
 ```

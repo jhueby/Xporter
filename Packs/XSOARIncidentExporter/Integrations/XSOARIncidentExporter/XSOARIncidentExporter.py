@@ -4,11 +4,15 @@ from CommonServerUserPython import *  # noqa: F401
 
 import json
 import re
+import time
 import urllib3
 from datetime import datetime, UTC
 from typing import Any
 
 urllib3.disable_warnings()
+
+MAX_RETRIES = 5
+INITIAL_BACKOFF = 1.0
 
 SEVERITY_MAP = {
     0: "Low",
@@ -38,6 +42,22 @@ class XSIAMClient(BaseClient):
             "Accept": "application/json",
         }
         super().__init__(base_url=base_url, verify=verify, proxy=proxy, headers=headers)
+
+    def _http_request(self, **kwargs) -> Any:
+        backoff = INITIAL_BACKOFF
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                return super()._http_request(**kwargs)
+            except DemistoException as e:
+                res = e.res
+                if res is not None and res.status_code == 429 and attempt < MAX_RETRIES:
+                    retry_after = res.headers.get("Retry-After")
+                    wait = float(retry_after) if retry_after else backoff
+                    demisto.info(f"XSIAM API rate limited (429), retrying in {wait:.1f}s (attempt {attempt + 1}/{MAX_RETRIES})")
+                    time.sleep(wait)
+                    backoff = min(backoff * 2, 60)
+                    continue
+                raise
 
     def insert_parsed_alerts(self, alerts: list) -> dict:
         body = {"request_data": {"alerts": alerts}}
