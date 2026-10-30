@@ -1,6 +1,6 @@
 # Xporter
 
-Content pack for exporting Cortex XSOAR 6 or XSOAR 8 incidents into Cortex XSIAM as parsed alerts, with War Room sync and bidirectional close status propagation.
+Content pack for exporting Cortex XSOAR 6 or XSOAR 8 incidents into Cortex XSIAM as parsed alerts, with War Room sync (text + file attachments), incomplete sync logging, and bidirectional close status propagation.
 
 ## How It Works
 
@@ -8,20 +8,20 @@ Content pack for exporting Cortex XSOAR 6 or XSOAR 8 incidents into Cortex XSIAM
 flowchart LR
     subgraph XSOAR["Cortex XSOAR (6 or 8)"]
         A["Query Incidents"]
-        W["Read War Room"]
+        W["Read War Room\n(text + files)"]
         C["Check Close Status"]
     end
 
     subgraph XSIAM["Cortex XSIAM"]
         B["Alerts / Issues Created"]
-        WR["War Room Entries Synced"]
+        WR["War Room Synced\n(entries + attachments)"]
         R["Alert Resolved"]
         T["Trigger Playbook\nCloseFromXSOAR"]
     end
 
     A -- "insert_parsed_alerts" --> B
     B -. "if sync_war_room enabled" .-> W
-    W -- "POST /xsoar/entry\n(with dedup)" --> WR
+    W -- "POST /xsoar/entry\nPOST /xsoar/entry/upload\n(with dedup)" --> WR
     C -- "query + resolve" --> R
     B -. "already-closed\nalert arrives" .-> T
 ```
@@ -29,9 +29,14 @@ flowchart LR
 ### Flow 1: Incident Push + War Room Sync
 
 1. Integration queries the local XSOAR API for incidents matching a configurable filter
-2. Maps each incident to the XSIAM parsed alert schema with full context (ID, name, status, severity, owner, close reason)
+2. Maps each incident to the XSIAM parsed alert schema with full context (ID, name, status, severity, owner, close reason, custom fields, labels)
 3. Posts alerts to XSIAM via the Insert Parsed Alerts API
-4. If **Sync War Room entries on push** is enabled, reads War Room entries from each incident and pushes them to the matching XSIAM issue with deduplication
+4. If **Sync War Room entries on push** is enabled:
+   - Reads War Room entries from each incident
+   - Text entries (type 1) pushed via `POST /xsoar/entry` with metadata header
+   - File attachments (type 3) downloaded from XSOAR and uploaded via `POST /xsoar/entry/upload/{investigation_id}`
+   - Deduplication via `[XSOAR War Room]` markers in entry content and file comments
+   - Incidents with incomplete syncs (alert not found, read failures, entry errors) are logged and surfaced in command output
 
 War Room entries land before close sync can shut the issue.
 
@@ -68,7 +73,7 @@ Runs entirely on XSIAM. When an already-closed incident arrives as a new alert, 
 | Maximum incidents per push | Batch size limit (default: 100) |
 | Elevate Low severity to Medium | Map Low to Medium so alerts create cases and trigger playbooks |
 | Timestamp offset (minutes) | Shift old XSOAR timestamps forward so XSIAM doesn't drop them |
-| Sync War Room entries on push | Automatically sync War Room entries when pushing incidents |
+| Sync War Room entries on push | Automatically sync War Room entries (text + file attachments) when pushing incidents |
 
 ## Setup
 
@@ -93,6 +98,29 @@ Create a scheduled job in XSOAR that runs `!xsoar-exporter-sync-new-incidents` o
 Run `!xsoar-exporter-sync-close-status` on a schedule to resolve XSIAM alerts whose source XSOAR incidents have closed.
 
 For real-time close sync, configure the **Close XSIAM Case From XSOAR** playbook as a trigger playbook in XSIAM (Settings > Automation & Feed > Trigger Playbooks).
+
+### 5. War Room Sync
+
+Enable **Sync War Room entries on push** in the integration configuration to automatically sync War Room entries during incident push. Text entries and file attachments are synced with deduplication so re-pushes do not create duplicates.
+
+To sync War Room entries for a specific incident on demand:
+
+```
+!xsoar-exporter-sync-war-room incident_id="12345"
+```
+
+Incomplete syncs (e.g., XSIAM alert not yet ingested, entry push failures) are logged in the integration logs and reported in the command output with per-incident status.
+
+## Severity Mapping
+
+| XSOAR Severity | XSIAM Severity | XSIAM Entity |
+|---|---|---|
+| Low (1) | Low | Issue |
+| Medium (2) | Medium | Case |
+| High (3) | High | Case |
+| Critical (4) | Critical | Case |
+
+With **Elevate Low severity to Medium** enabled, Low severity incidents become Medium and create cases instead of issues.
 
 ## Pack Structure
 

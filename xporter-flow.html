@@ -414,13 +414,13 @@
     <div class="left">
       <div class="card warroom">
         <h3><span class="step orange">3</span> Read War Room</h3>
-        <p>If enabled, reads all War Room entries from each XSOAR incident. Skips empty entries.</p>
+        <p>If enabled, reads all War Room entries from each XSOAR incident. Includes text entries and file attachments. Skips empty entries.</p>
         <div class="cmd"><code>sync_war_room: true</code></div>
       </div>
     </div>
     <div class="middle">
       <div class="arrow right">
-        <span class="label">Entries</span>
+        <span class="label">Text + Files</span>
         <div class="line" style="background: linear-gradient(90deg, #f0a060, #a78bfa);"></div>
         <span class="label">with dedup</span>
       </div>
@@ -428,8 +428,7 @@
     <div class="right">
       <div class="card warroom" style="border-color: #4a3520;">
         <h3><span class="step orange">4</span> Push to XSIAM Issue</h3>
-        <p>Finds matching XSIAM alert by XSOAR ID. Checks for <code>[XSOAR War Room]</code> markers to skip duplicates. Pushes new entries with metadata header.</p>
-        <div class="cmd"><code>POST /xsoar/entry</code></div>
+        <p>Finds matching XSIAM alert by XSOAR ID. Text entries pushed via <code>/xsoar/entry</code>. File attachments downloaded from XSOAR and uploaded via <code>/xsoar/entry/upload</code>. Dedup via <code>[XSOAR War Room]</code> markers.</p>
       </div>
     </div>
   </div>
